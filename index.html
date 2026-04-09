@@ -3,348 +3,930 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>pi-go.sh</title>
+  <title>pi-go — Terminal AI Coding Agent</title>
+  <meta name="description" content="A terminal-based coding agent built on Google ADK Go with multi-provider LLM support, sandboxed tools, and Memory Palace.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0a0e17;
-      --surface: #131a2b;
-      --border: #1e2a42;
-      --text: #e2e8f0;
-      --muted: #64748b;
-      --accent: #38bdf8;
-      --accent2: #818cf8;
-      --glow: rgba(56, 189, 248, 0.15);
+      --bg: oklch(96% 0.015 220);
+      --bg-alt: oklch(93% 0.025 250);
+      --surface: oklch(98% 0.005 220);
+      --text: oklch(25% 0.04 260);
+      --text-secondary: oklch(45% 0.03 260);
+      --accent: oklch(62% 0.18 260);
+      --accent-light: oklch(75% 0.12 260);
+      --accent-warm: oklch(72% 0.14 35);
+      --accent-green: oklch(68% 0.15 155);
+      --border: oklch(88% 0.02 250);
+      --code-bg: #1e1e2e;
+      --code-text: #cdd6f4;
+      --code-keyword: #cba6f7;
+      --code-fn: #89b4fa;
+      --code-string: #a6e3a1;
+      --code-comment: #6c7086;
+      --code-prompt: #89b4fa;
+      --code-flag: #f9e2af;
+      --hero-start: oklch(92% 0.04 230);
+      --hero-mid: oklch(93% 0.05 270);
+      --hero-end: oklch(95% 0.03 320);
+      --shadow: oklch(70% 0.02 260 / 0.1);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html { scroll-padding-top: 5rem; scroll-behavior: smooth; }
+
     body {
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-      background: var(--bg);
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      background: var(--bg);
+      line-height: 1.6;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Animated grid background */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px;
-      opacity: 0.3;
-      z-index: 0;
-      animation: gridShift 20s linear infinite;
-    }
-
-    @keyframes gridShift {
-      0% { transform: translate(0, 0); }
-      100% { transform: translate(60px, 60px); }
-    }
-
-    /* Glow orbs */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.4;
-      z-index: 0;
-      animation: float 8s ease-in-out infinite;
-    }
-    .orb-1 { width: 300px; height: 300px; background: var(--accent); top: 10%; left: 20%; }
-    .orb-2 { width: 250px; height: 250px; background: var(--accent2); bottom: 20%; right: 15%; animation-delay: -4s; }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-30px); }
-    }
-
-    /* Navigation */
+    /* ── Navigation ── */
     nav {
-      position: relative;
-      z-index: 10;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(12px);
-      background: rgba(10, 14, 23, 0.8);
+      padding: 0.9rem 2rem;
+      backdrop-filter: blur(16px);
+      background: oklch(96% 0.015 220 / 0.85);
+      transition: box-shadow 0.3s;
     }
 
+    nav.scrolled { box-shadow: 0 1px 12px var(--shadow); }
+
     .logo {
-      font-size: 1.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.3rem;
       font-weight: 700;
       color: var(--accent);
       text-decoration: none;
       letter-spacing: -0.5px;
     }
 
-    .logo span { color: var(--muted); }
+    .logo span { color: var(--text-secondary); font-weight: 400; }
 
-    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links { display: flex; align-items: center; gap: 1.8rem; }
 
     .nav-links a {
-      color: var(--muted);
+      color: var(--text-secondary);
       text-decoration: none;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
+      font-weight: 600;
       transition: color 0.2s;
-      cursor: pointer;
     }
 
-    .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+    .nav-links a:hover { color: var(--accent); }
 
-    /* Main content */
-    main {
-      position: relative;
-      z-index: 10;
-      flex: 1;
+    .nav-cta {
+      background: var(--text) !important;
+      color: var(--bg) !important;
+      padding: 0.45rem 1.1rem;
+      border-radius: 6px;
+      font-weight: 700 !important;
+      transition: opacity 0.2s, transform 0.15s !important;
+    }
+
+    .nav-cta:hover { opacity: 0.85; transform: translateY(-1px); }
+    .nav-cta:active { transform: scale(0.97); }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
+      text-align: center;
+      padding: 6rem 2rem 4rem;
+      background: linear-gradient(180deg, var(--hero-start), var(--hero-mid) 50%, var(--hero-end));
+      position: relative;
+      overflow: hidden;
     }
 
-    /* Pages */
-    .page {
-      display: none;
-      max-width: 720px;
-      width: 100%;
-      animation: fadeIn 0.3s ease;
+    /* Animated stars */
+    .star {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: oklch(80% 0.08 260);
+      border-radius: 50%;
+      animation: twinkle 3s ease-in-out infinite;
     }
 
-    .page.active { display: block; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
     }
 
-    /* Hero */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.4rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+    }
+
+    .hero-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
     .hero h1 {
-      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-size: clamp(2.6rem, 5.5vw, 4rem);
       font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 1rem;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.2rem;
+      max-width: 700px;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
     }
 
-    .hero h1 .highlight {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--accent), var(--accent-warm));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    .hero p {
-      color: var(--muted);
-      font-size: 1.05rem;
-      line-height: 1.7;
-      margin-bottom: 2rem;
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      color: var(--text-secondary);
+      max-width: 560px;
+      line-height: 1.65;
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
     }
 
-    /* Terminal block */
-    .terminal {
+    .hero-actions {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      box-shadow: 0 2px 12px oklch(25% 0.04 260 / 0.2);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { box-shadow: 0 2px 12px var(--shadow); }
+
+    /* ── Install bar ── */
+    .install-bar {
+      margin-top: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+    }
+
+    .install-cmd {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.15s;
+      position: relative;
+    }
+
+    .install-cmd:hover { transform: translateY(-1px); }
+    .install-cmd .prompt { color: var(--code-prompt); }
+    .install-cmd .copy-icon { color: var(--code-comment); font-size: 0.8rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--text);
+      color: var(--bg);
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transform: translateX(120%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 200;
+    }
+
+    .toast.show { transform: translateX(0); }
+
+    /* ── Sections ── */
+    .section {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-header h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 0.8rem;
+    }
+
+    .section-header p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Pitch (feature list) ── */
+    .pitch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem 2.5rem;
+    }
+
+    .pitch-item {
+      display: grid;
+      grid-template-columns: 20px 1fr;
+      gap: 0.8rem;
+      align-items: start;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pitch-item.visible { opacity: 1; transform: translateY(0); }
+
+    .pitch-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 0.45rem;
+    }
+
+    .pitch-item:nth-child(1) .pitch-dot { background: var(--accent); }
+    .pitch-item:nth-child(2) .pitch-dot { background: var(--accent-warm); }
+    .pitch-item:nth-child(3) .pitch-dot { background: var(--accent-green); }
+    .pitch-item:nth-child(4) .pitch-dot { background: oklch(72% 0.14 60); }
+    .pitch-item:nth-child(5) .pitch-dot { background: oklch(68% 0.16 330); }
+    .pitch-item:nth-child(6) .pitch-dot { background: oklch(70% 0.14 190); }
+
+    .pitch-item h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .pitch-item p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    /* ── Provider chips ── */
+    .providers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1rem;
+      border-radius: 100px;
+      font-size: 0.82rem;
+      font-weight: 600;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 2rem;
-      position: relative;
+      transition: transform 0.2s, box-shadow 0.2s;
+      opacity: 0;
+      animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .chip:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 4px 16px var(--shadow); }
+
+    .chip .icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: white;
+    }
+
+    /* ── Code showcase ── */
+    .code-section {
+      background: var(--bg-alt);
+      padding: 5rem 2rem;
+    }
+
+    .code-showcase {
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border-radius: 12px;
       overflow: hidden;
+      box-shadow: 0 8px 32px oklch(25% 0.04 260 / 0.15);
+      margin-bottom: 2rem;
     }
 
-    .terminal::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    .code-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.2rem;
+      background: oklch(18% 0.02 260);
+      border-bottom: 1px solid oklch(25% 0.02 260);
     }
 
-    .terminal .prompt { color: var(--accent); }
-    .terminal .cmd { color: var(--text); }
-    .terminal .comment { color: var(--muted); }
+    .code-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
 
-    .terminal pre {
-      font-size: 0.9rem;
-      line-height: 1.8;
+    .code-dot.red { background: #ff5f57; }
+    .code-dot.yellow { background: #febc2e; }
+    .code-dot.green { background: #28c840; }
+
+    .code-title {
+      flex: 1;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--code-comment);
+    }
+
+    .code-body {
+      padding: 1.5rem;
       overflow-x: auto;
     }
 
-    /* Cards */
+    .code-body pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--code-text);
+    }
+
+    .kw { color: var(--code-keyword); }
+    .fn { color: var(--code-fn); }
+    .st { color: var(--code-string); }
+    .cm { color: var(--code-comment); }
+    .fl { color: var(--code-flag); }
+    .pr { color: var(--code-prompt); }
+    .op { color: #f38ba8; }
+
+    /* ── Screenshot ── */
+    .screenshot-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 12px 48px oklch(25% 0.04 260 / 0.2);
+      border: 1px solid var(--border);
+    }
+
+    .screenshot-wrap img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* ── Architecture ── */
+    .arch-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .arch-block pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      overflow-x: auto;
+    }
+
+    /* ── Cards grid ── */
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.2rem;
     }
 
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .card:hover {
-      border-color: var(--accent);
-      box-shadow: 0 0 20px var(--glow);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px var(--shadow);
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      margin-bottom: 0.8rem;
     }
 
     .card h3 {
       font-size: 0.95rem;
-      margin-bottom: 0.5rem;
-      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 0.3rem;
     }
 
     .card p {
-      font-size: 0.8rem;
-      color: var(--muted);
-      line-height: 1.5;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.55;
     }
 
-    /* About page */
-    .about-content h2 {
-      font-size: 1.8rem;
-      margin-bottom: 1rem;
-    }
-
-    .about-content p {
-      color: var(--muted);
-      line-height: 1.8;
-      margin-bottom: 1rem;
-    }
-
-    .about-content a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    .about-content a:hover { text-decoration: underline; }
-
-    /* Footer */
+    /* ── Footer ── */
     footer {
-      position: relative;
-      z-index: 10;
+      background: linear-gradient(0deg, var(--hero-start), var(--hero-mid) 60%, var(--bg));
+      padding: 4rem 2rem 2rem;
       text-align: center;
-      padding: 1.5rem;
-      color: var(--muted);
-      font-size: 0.75rem;
-      border-top: 1px solid var(--border);
-      backdrop-filter: blur(12px);
-      background: rgba(10, 14, 23, 0.8);
+      position: relative;
+      overflow: hidden;
     }
 
-    footer a {
-      color: var(--accent);
+    .footer-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    footer h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800;
+      margin-bottom: 0.8rem;
+    }
+
+    footer .sub {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      font-size: 1rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
       text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: color 0.2s;
     }
 
-    /* Mobile */
-    @media (max-width: 600px) {
-      nav { padding: 1rem; }
+    .footer-links a:hover { color: var(--accent); }
+
+    .footer-copy {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* ── Reveal animation ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .pitch-grid { grid-template-columns: 1fr; }
+      .nav-links a:not(.nav-cta):not([href="#features"]) { display: none; }
+      nav { padding: 0.8rem 1.2rem; }
+      .section { padding: 3.5rem 1.2rem; }
+      .code-section { padding: 3.5rem 1.2rem; }
+      .hero { padding: 5rem 1.2rem 3rem; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-actions { flex-direction: column; align-items: center; }
+      .btn { width: 100%; justify-content: center; }
       .cards { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
 
-  <nav>
-    <a href="#/" class="logo">pi-go<span>.sh</span></a>
+  <!-- Nav -->
+  <nav id="nav">
+    <a href="#" class="logo">pi-go<span>.sh</span></a>
     <div class="nav-links">
-      <a href="#/" data-page="home">Home</a>
-      <a href="#/about" data-page="about">About</a>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#architecture">Architecture</a>
+      <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="nav-cta">GitHub</a>
     </div>
   </nav>
 
-  <main>
-    <!-- Home -->
-    <section id="page-home" class="page active">
-      <div class="hero">
-        <h1><span class="highlight">pi-go.sh</span></h1>
-        <p>Infrastructure tools and automation scripts for cloud-native environments. Built with Go, deployed everywhere.</p>
-      </div>
+  <!-- Hero -->
+  <section class="hero" id="top">
+    <!-- Stars -->
+    <div class="star" style="top:12%;left:8%;animation-delay:0s"></div>
+    <div class="star" style="top:25%;left:75%;animation-delay:0.8s"></div>
+    <div class="star" style="top:18%;left:42%;animation-delay:1.6s"></div>
+    <div class="star" style="top:60%;left:15%;animation-delay:0.4s"></div>
+    <div class="star" style="top:45%;left:88%;animation-delay:2.1s"></div>
+    <div class="star" style="top:70%;left:55%;animation-delay:1.2s"></div>
+    <div class="star" style="top:35%;left:28%;animation-delay:0.6s"></div>
+    <div class="star" style="top:80%;left:72%;animation-delay:1.8s"></div>
 
-      <div class="terminal">
-        <pre><span class="prompt">$</span> <span class="cmd">curl -sSL https://pi-go.sh/install | sh</span>
-<span class="comment"># coming soon</span></pre>
-      </div>
+    <div class="hero-badge">
+      <span class="dot"></span>
+      Built on Google ADK Go
+    </div>
 
-      <div class="cards">
-        <div class="card">
-          <h3>Cloud Native</h3>
-          <p>Kubernetes-first tooling for modern infrastructure workflows.</p>
+    <h1>Your <span class="gradient">AI coding agent</span>, in the terminal</h1>
+
+    <p class="hero-sub">
+      Multi-provider LLMs, sandboxed tool execution, persistent memory, and a beautiful TUI.
+      All from a single binary.
+    </p>
+
+    <div class="hero-actions">
+      <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View on GitHub
+      </a>
+      <a href="#install" class="btn btn-secondary">Quick Install</a>
+    </div>
+
+    <div class="install-bar">
+      <div class="install-cmd" onclick="copyInstall(this)" title="Click to copy">
+        <span class="prompt">$</span> curl -fsSL https://pi-go.sh/install | bash
+        <span class="copy-icon">&#x2398;</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-header reveal">
+      <h2>Everything you need in one binary</h2>
+      <p>A fully-featured coding agent that respects your terminal workflow</p>
+    </div>
+
+    <div class="pitch-grid">
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Multi-Provider LLM</h3>
+          <p>Claude, GPT, Gemini, and Ollama for local models. Switch providers mid-conversation with a slash command.</p>
         </div>
-        <div class="card">
-          <h3>GitOps Ready</h3>
-          <p>Declarative configuration that fits into your CI/CD pipeline.</p>
-        </div>
-        <div class="card">
-          <h3>Open Source</h3>
-          <p>MIT licensed. Contribute, fork, and build on top of it.</p>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Sandboxed Tools</h3>
+          <p>File read/write/edit, shell execution, grep, find, tree, and git &mdash; all restricted to the project directory via <code>os.Root</code>.</p>
         </div>
       </div>
-    </section>
-
-    <!-- About -->
-    <section id="page-about" class="page">
-      <div class="about-content">
-        <h2>About</h2>
-        <p>
-          <strong>pi-go.sh</strong> is a collection of infrastructure tools and
-          automation utilities built primarily in Go. The project focuses on
-          simplifying cloud-native operations, from cluster bootstrapping to
-          day-2 management.
-        </p>
-        <p>
-          Find the source on <a href="https://github.com/dimetron/pi-go.sh" target="_blank" rel="noopener">GitHub</a>.
-        </p>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Memory Palace</h3>
+          <p>4-layer contextual memory with SQLite, semantic embeddings, temporal knowledge graph, and project miners.</p>
+        </div>
       </div>
-    </section>
-  </main>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>LSP Integration</h3>
+          <p>JSON-RPC client for Go, TypeScript, Python, and Rust with auto-format and diagnostics hooks.</p>
+        </div>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Subagent System</h3>
+          <p>Process-based multi-agent orchestration with types: explore, plan, designer, reviewer, and task runners.</p>
+        </div>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Session Branching</h3>
+          <p>JSONL append-only event logs with branching, compaction, and resume. Fork conversations and switch paths.</p>
+        </div>
+      </div>
+    </div>
 
+    <div class="providers reveal">
+      <div class="chip" style="animation-delay:0.1s">
+        <span class="icon" style="background:#b45309">A</span> Anthropic
+      </div>
+      <div class="chip" style="animation-delay:0.2s">
+        <span class="icon" style="background:#0f766e">O</span> OpenAI
+      </div>
+      <div class="chip" style="animation-delay:0.3s">
+        <span class="icon" style="background:#4338ca">G</span> Gemini
+      </div>
+      <div class="chip" style="animation-delay:0.4s">
+        <span class="icon" style="background:#71717a">L</span> Ollama
+      </div>
+    </div>
+  </section>
+
+  <!-- Code showcase -->
+  <section class="code-section" id="install">
+    <div class="code-showcase">
+      <div class="section-header reveal">
+        <h2>Up and running in seconds</h2>
+        <p>One command to install. One binary to run.</p>
+      </div>
+
+      <div class="code-block reveal">
+        <div class="code-titlebar">
+          <div class="code-dot red"></div>
+          <div class="code-dot yellow"></div>
+          <div class="code-dot green"></div>
+          <span class="code-title">terminal</span>
+        </div>
+        <div class="code-body">
+<pre><span class="cm"># Install pi-go</span>
+<span class="pr">$</span> curl -fsSL https://pi-go.sh/install | bash
+
+<span class="cm"># Or with go install</span>
+<span class="pr">$</span> go install github.com/dimetron/pi-go/cmd/pi@latest
+
+<span class="cm"># Start interactive mode</span>
+<span class="pr">$</span> pi
+
+<span class="cm"># Select a model</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">claude:sonnet</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">openai:gpt-4o</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">gemini:gemini-2.5-pro</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">ollama/qwen3.5:latest</span>
+
+<span class="cm"># Use model roles</span>
+<span class="pr">$</span> pi <span class="fl">--smol</span>          <span class="cm"># fast, cheap model</span>
+<span class="pr">$</span> pi <span class="fl">--slow</span>          <span class="cm"># most capable model</span>
+<span class="pr">$</span> pi <span class="fl">--plan</span>          <span class="cm"># planning-oriented model</span></pre>
+        </div>
+      </div>
+
+      <div class="code-block reveal">
+        <div class="code-titlebar">
+          <div class="code-dot red"></div>
+          <div class="code-dot yellow"></div>
+          <div class="code-dot green"></div>
+          <span class="code-title">slash commands</span>
+        </div>
+        <div class="code-body">
+<pre><span class="pr">/model</span>         <span class="cm">Switch model mid-conversation</span>
+<span class="pr">/session</span>       <span class="cm">List and switch sessions</span>
+<span class="pr">/branch</span>        <span class="cm">Create a conversation branch</span>
+<span class="pr">/commit</span>        <span class="cm">AI-generated conventional commits</span>
+<span class="pr">/plan</span>          <span class="cm">Start PDD planning session</span>
+<span class="pr">/run</span>           <span class="cm">Execute a spec with task agent</span>
+<span class="pr">/memory</span>        <span class="cm">Memory Palace commands</span>
+<span class="pr">/audit</span>         <span class="cm">Scan skills for Unicode threats</span>
+<span class="pr">/agents</span>        <span class="cm">Show running subagents</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screenshot -->
+  <section class="section reveal">
+    <div class="section-header">
+      <h2>Beautiful terminal interface</h2>
+      <p>Bubble Tea v2 TUI with Markdown rendering, theming, and a clean layout</p>
+    </div>
+    <div class="screenshot-wrap">
+      <img src="https://raw.githubusercontent.com/dimetron/pi-go/main/docs/screen/pi-go.png" alt="pi-go terminal UI screenshot" loading="lazy">
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="section" id="architecture" style="background: var(--bg-alt); padding: 5rem 2rem;">
+    <div style="max-width: 1060px; margin: 0 auto;">
+      <div class="section-header reveal">
+        <h2>Clean architecture</h2>
+        <p>Modular Go packages with clear separation of concerns</p>
+      </div>
+
+      <div class="arch-block reveal">
+<pre>User input  &rarr;  CLI  &rarr;  Agent  &rarr;  LLM provider  &rarr;  Tool calls  &rarr;  Response  &rarr;  TUI
+                         &darr;          &darr;                 &darr;
+                  Session store    Palace            LSP servers
+                  (JSONL events)   (memory, KG,      (format, diagnostics)
+                                    search)</pre>
+      </div>
+
+      <div class="cards" style="margin-top: 2.5rem;">
+        <div class="card reveal">
+          <div class="card-icon" style="background: oklch(92% 0.06 260);">&#x2699;</div>
+          <h3>Agent &amp; CLI</h3>
+          <p>Cobra CLI, ADK runner, retry logic, output modes (interactive, print, JSON, RPC).</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: oklch(92% 0.06 35);">&#x1F6E1;</div>
+          <h3>Sandboxed Tools</h3>
+          <p>Read, write, edit, bash, grep, find, git, LSP — all scoped to project root.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: oklch(92% 0.06 155);">&#x1F9E0;</div>
+          <h3>Memory Palace</h3>
+          <p>SQLite drawers, FTS5 search, semantic embeddings, temporal knowledge graph.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: oklch(92% 0.06 330);">&#x1F500;</div>
+          <h3>Session &amp; Branching</h3>
+          <p>JSONL event logs, session persistence, branching, compaction, and resume.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: oklch(92% 0.06 60);">&#x1F916;</div>
+          <h3>Subagents</h3>
+          <p>Process-based orchestration with concurrency pool and typed agents.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: oklch(92% 0.06 190);">&#x1F50C;</div>
+          <h3>Extensions</h3>
+          <p>Shell hooks, skill files, MCP servers, and security auditing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
   <footer>
-    &copy; 2026 pi-go.sh &mdash; <a href="https://github.com/dimetron/pi-go.sh" target="_blank" rel="noopener">GitHub</a>
+    <div class="star" style="top:15%;left:20%;animation-delay:0.5s"></div>
+    <div class="star" style="top:30%;left:70%;animation-delay:1.3s"></div>
+    <div class="star" style="top:50%;left:40%;animation-delay:0.9s"></div>
+
+    <div class="footer-content">
+      <h2>Ready to try pi-go?</h2>
+      <p class="sub">Open source, MIT licensed, built with Go.</p>
+      <div class="hero-actions" style="margin-bottom: 2.5rem;">
+        <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/dimetron/pi-go/releases" target="_blank" rel="noopener" class="btn btn-secondary">Releases</a>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/dimetron/pi-go/blob/main/ARCHITECTURE.md" target="_blank" rel="noopener">Architecture</a>
+        <a href="https://github.com/dimetron/pi-go/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+        <a href="https://github.com/dimetron/pi-go/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      </div>
+      <p class="footer-copy">&copy; 2026 pi-go &mdash; dimetron</p>
+    </div>
   </footer>
 
+  <!-- Toast -->
+  <div class="toast" id="toast">Copied to clipboard!</div>
+
   <script>
-    // SPA Router
-    (function () {
-      // Restore path from 404.html redirect
-      var redirect = new URLSearchParams(window.location.search).get('p');
-      if (redirect) {
-        history.replaceState(null, '', redirect);
-      }
+    // Nav scroll effect
+    var nav = document.getElementById('nav');
+    window.addEventListener('scroll', function () {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
 
-      var pages = document.querySelectorAll('.page');
-      var links = document.querySelectorAll('[data-page]');
+    // Intersection Observer for reveal animations
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
 
-      function navigate() {
-        var hash = window.location.hash || '#/';
-        var route = hash.replace('#/', '').replace('/', '') || 'home';
+    document.querySelectorAll('.reveal, .pitch-item').forEach(function (el, i) {
+      el.style.transitionDelay = (i % 6) * 80 + 'ms';
+      observer.observe(el);
+    });
 
-        pages.forEach(function (p) {
-          p.classList.toggle('active', p.id === 'page-' + route);
-        });
+    // Copy install command
+    function copyInstall(el) {
+      var cmd = 'curl -fsSL https://pi-go.sh/install | bash';
+      navigator.clipboard.writeText(cmd).then(function () {
+        var toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(function () { toast.classList.remove('show'); }, 2000);
+      });
+    }
 
-        links.forEach(function (a) {
-          a.classList.toggle('active', a.dataset.page === route);
-        });
-      }
+    // Provider chip animation trigger
+    var chipObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.querySelectorAll('.chip').forEach(function (chip) {
+            chip.style.opacity = '1';
+          });
+        }
+      });
+    }, { threshold: 0.3 });
 
-      window.addEventListener('hashchange', navigate);
-      navigate();
-    })();
+    var providersEl = document.querySelector('.providers');
+    if (providersEl) chipObserver.observe(providersEl);
   </script>
 </body>
 </html>
