@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pi-go.sh</title>
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --surface: #131a2b;
+      --border: #1e2a42;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --glow: rgba(56, 189, 248, 0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.3;
+      z-index: 0;
+      animation: gridShift 20s linear infinite;
+    }
+
+    @keyframes gridShift {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(60px, 60px); }
+    }
+
+    /* Glow orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+      z-index: 0;
+      animation: float 8s ease-in-out infinite;
+    }
+    .orb-1 { width: 300px; height: 300px; background: var(--accent); top: 10%; left: 20%; }
+    .orb-2 { width: 250px; height: 250px; background: var(--accent2); bottom: 20%; right: 15%; animation-delay: -4s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-30px); }
+    }
+
+    /* Navigation */
+    nav {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      background: rgba(10, 14, 23, 0.8);
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: var(--muted); }
+
+    .nav-links { display: flex; gap: 1.5rem; }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+
+    /* Main content */
+    main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    /* Pages */
+    .page {
+      display: none;
+      max-width: 720px;
+      width: 100%;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .page.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hero */
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 .highlight {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+
+    /* Terminal block */
+    .terminal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .terminal::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .terminal .prompt { color: var(--accent); }
+    .terminal .cmd { color: var(--text); }
+    .terminal .comment { color: var(--muted); }
+
+    .terminal pre {
+      font-size: 0.9rem;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    /* Cards */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px var(--glow);
+    }
+
+    .card h3 {
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+
+    .card p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* About page */
+    .about-content h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .about-content p {
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+
+    .about-content a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .about-content a:hover { text-decoration: underline; }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      background: rgba(10, 14, 23, 0.8);
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      nav { padding: 1rem; }
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <nav>
+    <a href="#/" class="logo">pi-go<span>.sh</span></a>
+    <div class="nav-links">
+      <a href="#/" data-page="home">Home</a>
+      <a href="#/about" data-page="about">About</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Home -->
+    <section id="page-home" class="page active">
+      <div class="hero">
+        <h1><span class="highlight">pi-go.sh</span></h1>
+        <p>Infrastructure tools and automation scripts for cloud-native environments. Built with Go, deployed everywhere.</p>
+      </div>
+
+      <div class="terminal">
+        <pre><span class="prompt">$</span> <span class="cmd">curl -sSL https://pi-go.sh/install | sh</span>
+<span class="comment"># coming soon</span></pre>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h3>Cloud Native</h3>
+          <p>Kubernetes-first tooling for modern infrastructure workflows.</p>
+        </div>
+        <div class="card">
+          <h3>GitOps Ready</h3>
+          <p>Declarative configuration that fits into your CI/CD pipeline.</p>
+        </div>
+        <div class="card">
+          <h3>Open Source</h3>
+          <p>MIT licensed. Contribute, fork, and build on top of it.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section id="page-about" class="page">
+      <div class="about-content">
+        <h2>About</h2>
+        <p>
+          <strong>pi-go.sh</strong> is a collection of infrastructure tools and
+          automation utilities built primarily in Go. The project focuses on
+          simplifying cloud-native operations, from cluster bootstrapping to
+          day-2 management.
+        </p>
+        <p>
+          Find the source on <a href="https://github.com/dimetron/pi-go.sh" target="_blank" rel="noopener">GitHub</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    &copy; 2026 pi-go.sh &mdash; <a href="https://github.com/dimetron/pi-go.sh" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+  <script>
+    // SPA Router
+    (function () {
+      // Restore path from 404.html redirect
+      var redirect = new URLSearchParams(window.location.search).get('p');
+      if (redirect) {
+        history.replaceState(null, '', redirect);
+      }
+
+      var pages = document.querySelectorAll('.page');
+      var links = document.querySelectorAll('[data-page]');
+
+      function navigate() {
+        var hash = window.location.hash || '#/';
+        var route = hash.replace('#/', '').replace('/', '') || 'home';
+
+        pages.forEach(function (p) {
+          p.classList.toggle('active', p.id === 'page-' + route);
+        });
+
+        links.forEach(function (a) {
+          a.classList.toggle('active', a.dataset.page === route);
+        });
+      }
+
+      window.addEventListener('hashchange', navigate);
+      navigate();
+    })();
+  </script>
+</body>
+</html>
