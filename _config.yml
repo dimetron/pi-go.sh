@@ -1,0 +1,4 @@
+plugins:
+  - jekyll-include-cache
+exclude:
+  - README.md
