@@ -899,7 +899,7 @@
 
     <div class="hero-right">
       <div class="hero-screenshot">
-        <img src="docs/pi-go.gif" alt="pi-go terminal UI — minimax-m2.7:cloud model with Ollama">
+        <img src="docs/pi-go.gif" alt="pi-go terminal UI — minimax-m3:cloud model with Ollama">
       </div>
     </div>
   </section>
@@ -919,7 +919,7 @@
         <div class="pitch-dot"></div>
         <div>
           <h3>Multi-Provider LLM</h3>
-          <p>Claude, GPT, Gemini, and Ollama for local models. Switch providers mid-conversation with a slash command.</p>
+          <p>Claude, GPT, Gemini, Mistral, OpenCode, and Ollama (local or cloud). Switch providers mid-conversation with a slash command.</p>
         </div>
       </div>
       <div class="pitch-item">
@@ -970,6 +970,12 @@
         <span class="icon" style="background:#4338ca">G</span> Gemini
       </div>
       <div class="chip" style="animation-delay:0.4s">
+        <span class="icon" style="background:#7c3aed">M</span> Mistral
+      </div>
+      <div class="chip" style="animation-delay:0.5s">
+        <span class="icon" style="background:#0ea5e9">K</span> OpenCode
+      </div>
+      <div class="chip" style="animation-delay:0.6s">
         <span class="icon" style="background:#71717a">L</span> Ollama
       </div>
     </div>
@@ -1001,11 +1007,13 @@
 <span class="pr">$</span> pi
 
 <span class="cm"># Select a model</span>
-<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">claude-opus-4-7</span>
-<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">gpt-5.4</span>
-<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">gemini:gemini-2.5-pro</span>
-<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">ollama/qwen3.6:latest</span>
-<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">minimax-m2.7:cloud</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">claude-sonnet-5</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">gpt-5.6-sol</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">gemini:gemini-3.6-flash</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">ollama/gemma4:12b-mlx</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">ollama/deepseek-v4-flash:0731:cloud</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">minimax-m3:cloud</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">opencode/kimi-k3</span>
 
 <span class="cm"># Use model roles</span>
 <span class="pr">$</span> pi <span class="fl">--smol</span>          <span class="cm"># fast, cheap model</span>
@@ -1026,11 +1034,14 @@
 <span class="pr">/session</span>       <span class="cm">List and switch sessions</span>
 <span class="pr">/branch</span>        <span class="cm">Create a conversation branch</span>
 <span class="pr">/commit</span>        <span class="cm">AI-generated conventional commits</span>
+<span class="pr">/compact</span>       <span class="cm">Compact session history</span>
 <span class="pr">/plan</span>          <span class="cm">Start PDD planning session</span>
 <span class="pr">/run</span>           <span class="cm">Execute a spec with task agent</span>
 <span class="pr">/memory</span>        <span class="cm">Memory Palace commands</span>
 <span class="pr">/audit</span>         <span class="cm">Scan skills for Unicode threats</span>
-<span class="pr">/agents</span>        <span class="cm">Show running subagents</span></pre>
+<span class="pr">/agents</span>        <span class="cm">Show running subagents</span>
+<span class="pr">/skill-create</span>  <span class="cm">Create a new skill</span>
+<span class="pr">/restart</span>       <span class="cm">Restart pi-go</span></pre>
         </div>
       </div>
     </div>
