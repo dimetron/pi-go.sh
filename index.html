@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>pi-go — Terminal AI Coding Agent</title>
   <meta name="description" content="A terminal-based coding agent built on Google ADK Go with multi-provider LLM support, sandboxed tools, and Memory Palace.">
+  <link rel="alternate" type="application/rss+xml" title="pi-go blog RSS" href="/feed.xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -851,6 +852,7 @@
       <a href="#features">Features</a>
       <a href="#install">Install</a>
       <a href="#architecture">Architecture</a>
+      <a href="/blog.html">Blog</a>
       <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="nav-cta">GitHub</a>
     </div>
   </nav>
@@ -891,7 +893,7 @@
 
       <div class="install-bar">
         <div class="install-cmd" onclick="copyInstall(this)" title="Click to copy">
-          <span class="prompt">$</span> curl -fsSL https://pi-go.sh/install | bash
+          <span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash
           <span class="copy-icon">&#x2398;</span>
         </div>
       </div>
@@ -997,8 +999,11 @@
           <span class="code-title">terminal</span>
         </div>
         <div class="code-body">
-<pre><span class="cm"># Install pi-go</span>
-<span class="pr">$</span> curl -fsSL https://pi-go.sh/install | bash
+<pre><span class="cm"># Linux and macOS</span>
+<span class="pr">$</span> curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash
+
+<span class="cm"># Windows PowerShell</span>
+<span class="pr">PS&gt;</span> powershell -NoProfile -Command "iwr https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.ps1 -UseBasicParsing | iex"
 
 <span class="cm"># Or with go install</span>
 <span class="pr">$</span> go install github.com/dimetron/pi-go/cmd/pi@latest
@@ -1113,6 +1118,8 @@
       </div>
       <div class="footer-links">
         <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">GitHub</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/feed.xml">RSS</a>
         <a href="https://github.com/dimetron/pi-go/blob/main/ARCHITECTURE.md" target="_blank" rel="noopener">Architecture</a>
         <a href="https://github.com/dimetron/pi-go/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
         <a href="https://github.com/dimetron/pi-go/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
@@ -1147,7 +1154,7 @@
 
     // Copy install command
     function copyInstall(el) {
-      var cmd = 'curl -fsSL https://pi-go.sh/install | bash';
+      var cmd = 'curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash';
       navigator.clipboard.writeText(cmd).then(function () {
         var toast = document.getElementById('toast');
         toast.classList.add('show');
