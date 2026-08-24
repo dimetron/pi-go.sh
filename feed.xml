@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>pi-go blog</title>
+    <link>https://pi-go.sh/blog.html</link>
+    <atom:link href="https://pi-go.sh/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Updates, ideas, and release notes from the pi-go project — a terminal AI coding agent built on Google ADK Go.</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 24 Aug 2026 12:00:00 +0000</lastBuildDate>
+    <generator>hand-rolled</generator>
+
+    <item>
+      <title>OpenRouter arrives in Pi-Go</title>
+      <link>https://pi-go.sh/blog/openrouter-provider.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/openrouter-provider.html</guid>
+      <pubDate>Mon, 24 Aug 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        Pi-Go now supports OpenRouter as a first-class provider. Select models with the openrouter/ prefix and use tool calling, streamed responses and reasoning tokens, model metadata-based context windows, and configurable thinking levels through one OpenRouter API key.
+      ]]></description>
+    </item>
+
+    <item>
+      <title>Introducing Pi-Go</title>
+      <link>https://pi-go.sh/blog/introducing-pi-go.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/introducing-pi-go.html</guid>
+      <pubDate>Sat, 18 Apr 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        pi-go is a terminal-based AI coding agent built on Google ADK Go. It ships as a single binary, runs multiple LLM providers side by side, keeps your filesystem safe behind a sandbox, and remembers what you've worked on across sessions. This post introduces the project, the reasoning behind it, and the six pillars that make pi-go different: multi-provider LLMs, sandboxed tools, Memory Palace, LSP integration, a subagent system, and session branching.
+      ]]></description>
+    </item>
+  </channel>
+</rss>
