@@ -370,6 +370,10 @@
       margin-top: 2.5rem;
       opacity: 0;
       animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.8rem;
     }
 
     .install-cmd {
@@ -896,6 +900,10 @@
           <span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash
           <span class="copy-icon">&#x2398;</span>
         </div>
+        <div class="install-cmd" onclick="copyInstall(this)" title="Click to copy">
+          <span class="prompt">PS&gt;</span> powershell -NoProfile -Command "iwr https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.ps1 -UseBasicParsing | iex"
+          <span class="copy-icon">&#x2398;</span>
+        </div>
       </div>
     </div>
 
@@ -1158,7 +1166,12 @@
 
     // Copy install command
     function copyInstall(el) {
-      var cmd = 'curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash';
+      var clone = el.cloneNode(true);
+      var prompt = clone.querySelector('.prompt');
+      var icon = clone.querySelector('.copy-icon');
+      if (prompt) prompt.remove();
+      if (icon) icon.remove();
+      var cmd = clone.textContent.trim();
       navigator.clipboard.writeText(cmd).then(function () {
         var toast = document.getElementById('toast');
         toast.classList.add('show');
