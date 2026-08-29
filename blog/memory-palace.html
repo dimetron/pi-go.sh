@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Memory Palace: four layers of context — pi-go blog</title>
+  <meta name="description" content="pi-go's Memory Palace combines SQLite facts, semantic embeddings, a temporal knowledge graph, and background miners.">
+  <link rel="alternate" type="application/rss+xml" title="pi-go blog RSS" href="/feed.xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a12;
+      --surface: rgba(15, 15, 30, 0.7);
+      --text: #e0e0f0;
+      --text-secondary: #8888aa;
+      --neon-cyan: #00f0ff;
+      --neon-magenta: #ff00aa;
+      --neon-purple: #b347ff;
+      --neon-green: #00ff88;
+      --neon-yellow: #ffe600;
+      --border: rgba(0, 240, 255, 0.12);
+      --border-strong: rgba(0, 240, 255, 0.25);
+      --code-bg: rgba(10, 10, 20, 0.9);
+      --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 60px rgba(0, 240, 255, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.75;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0, 0, 0, 0.05) 2px, rgba(0, 0, 0, 0.05) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 2rem;
+      backdrop-filter: blur(20px) saturate(1.5);
+      background: rgba(10, 10, 18, 0.75);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.25rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      text-decoration: none;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+    .logo span {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 12px var(--neon-cyan);
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 1.8rem; }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    .nav-cta {
+      background: linear-gradient(135deg, var(--neon-magenta), var(--neon-purple));
+      color: #fff !important;
+      padding: 0.55rem 1.1rem;
+      border-radius: 6px;
+      text-shadow: none !important;
+      box-shadow: 0 0 20px rgba(255, 0, 170, 0.3);
+    }
+
+    article {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 7rem 1.5rem 3rem;
+    }
+
+    .breadcrumb {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+    .breadcrumb a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+    }
+    .breadcrumb a:hover { text-shadow: 0 0 8px var(--neon-cyan); }
+
+    .post-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .post-meta .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 4.5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .lede {
+      font-size: 1.25rem;
+      color: var(--text);
+      margin-bottom: 2.5rem;
+      padding-left: 1rem;
+      border-left: 3px solid var(--neon-cyan);
+      box-shadow: -6px 0 20px -10px var(--neon-cyan);
+    }
+
+    h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin: 2.5rem 0 1rem;
+      color: var(--text);
+      position: relative;
+      padding-left: 1.1rem;
+    }
+    h2::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.4em;
+      bottom: 0.4em;
+      width: 3px;
+      background: linear-gradient(180deg, var(--neon-magenta), var(--neon-purple));
+      box-shadow: 0 0 10px var(--neon-magenta);
+    }
+
+    p {
+      margin-bottom: 1.2rem;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    ul {
+      margin: 0 0 1.5rem 1.5rem;
+      color: var(--text);
+    }
+    ul li { margin-bottom: 0.5rem; }
+    ul li::marker { color: var(--neon-cyan); }
+
+    strong { color: var(--neon-cyan); font-weight: 600; }
+    a { color: var(--neon-cyan); text-decoration: none; border-bottom: 1px dashed rgba(0, 240, 255, 0.4); }
+    a:hover { text-shadow: 0 0 8px var(--neon-cyan); }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92em;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 0.12em 0.45em;
+      border-radius: 4px;
+      color: var(--neon-green);
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      margin: 1.2rem 0 1.8rem;
+      box-shadow: var(--glow-cyan);
+    }
+    pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: #cdd6f4;
+    }
+    pre .prompt { color: var(--neon-cyan); user-select: none; }
+    pre .comment { color: #555577; }
+
+    .cta {
+      margin: 3rem 0 1rem;
+      padding: 1.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: var(--glow-cyan);
+    }
+    .cta h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      margin-bottom: 0.6rem;
+    }
+    .cta-buttons {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 0;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      color: #0a0a12;
+      box-shadow: var(--glow-cyan);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--neon-cyan);
+      border: 1px solid var(--border-strong);
+    }
+    .btn:hover { transform: translateY(-2px); }
+
+    footer {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    footer a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+      border-bottom: 0;
+      margin: 0 0.5rem;
+    }
+
+    @media (max-width: 640px) {
+      nav { padding: 0.8rem 1.2rem; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      article { padding: 6rem 1.2rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">PI-GO<span>.SH</span></a>
+    <div class="nav-links">
+      <a href="/#features">Features</a>
+      <a href="/#install">Install</a>
+      <a href="/blog.html" class="active">Blog</a>
+      <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="nav-cta">GitHub</a>
+    </div>
+  </nav>
+
+  <article>
+    <div class="post-meta">
+      <span class="dot"></span>
+      <time datetime="2026-08-29">Aug 29, 2026</time>
+      <span>·</span>
+      <span>Deep dive</span>
+    </div>
+
+    <h1>Memory Palace: four layers of context that learn while you code</h1>
+
+    <p class="lede">
+      The Memory Palace is pi-go&rsquo;s persistent contextual memory &mdash; SQLite facts, semantic embeddings, a temporal knowledge graph, and background project miners that turn your codebase into structured recall the agent can query on demand.
+    </p>
+
+    <h2>What the Memory Palace is</h2>
+
+    <p>
+      Most coding agents start every session with the same blank slate: whatever fits in the system prompt plus whatever they re-read from disk. pi-go keeps a second brain on disk. Every tool call the agent makes is captured, compressed, and stored; every file in your project can be mined into searchable embeddings; relationships between entities are tracked as temporal triples that can be invalidated when the world changes. The result is the <em>Memory Palace</em> &mdash; a four-layer contextual memory that lives under <code>internal/palace/</code> and <code>internal/memory/</code> and is queried through native ADK tools and the <code>pi memory</code> command.
+    </p>
+
+    <p>
+      The palace is organized as a physical metaphor: a <code>Palace</code> holds <code>Drawer</code> records grouped into <code>Wing</code>s (one per project) and <code>Room</code>s (one per source directory). Drawers can carry a <code>Hall</code> tag &mdash; <code>hall_decisions</code>, <code>hall_bugs</code>, <code>hall_features</code>, <code>hall_refactors</code>, <code>hall_discoveries</code>, <code>hall_changes</code> &mdash; mirroring the six <code>ObservationType</code> values (<code>decision</code>, <code>bugfix</code>, <code>feature</code>, <code>refactor</code>, <code>discovery</code>, <code>change</code>) the observation pipeline emits. The <code>Palace</code> struct wires all four layers together: a <code>PalaceStore</code>, an <code>Embedder</code>, a <code>DrawerService</code>, a <code>Graph</code>, a <code>KnowledgeGraph</code>, and a <code>MemoryStack</code>.
+    </p>
+
+    <h2>The four layers</h2>
+
+    <p>
+      The <code>MemoryStack</code> in <code>internal/palace/layers.go</code> implements a four-layer memory model. Each layer is cheaper to consult than the one below it, and the agent only descends when the upper layers don&rsquo;t answer.
+    </p>
+
+    <ul>
+      <li><strong>L0 &mdash; Identity.</strong> A plain-text file (<code>PalaceConfig.IdentityFile</code>) loaded by <code>MemoryStack.loadIdentity</code>. Whatever you want the agent to always know about itself or the project &mdash; zero cost, always present.</li>
+      <li><strong>L1 &mdash; Essential story.</strong> <code>loadEssentialStory</code> takes the top-K drawers for the current wing (default <code>L1TopK = 15</code>, capped at <code>L1MaxChars = 3200</code>), sorted by <code>Importance</code> then recency, grouped by room. Injected into the system prompt at session start via <code>Palace.WakeUp</code>.</li>
+      <li><strong>L2 &mdash; On-demand recall.</strong> <code>Palace.Recall(wing, room)</code> returns up to <code>L2MaxDrawers = 10</code> drawers for a specific wing/room, each truncated to <code>L2MaxCharsPerDrawer = 300</code> chars. The agent pulls this only when it needs detail about a particular area.</li>
+      <li><strong>L3 &mdash; Search.</strong> Delegated to <code>DrawerService.Search</code>: semantic cosine similarity over embeddings when an embedder is loaded, falling back to FTS5 keyword ranking otherwise. The broadest, most expensive layer &mdash; used only for explicit queries.</li>
+    </ul>
+
+    <h2>Layer 1: SQLite facts</h2>
+
+    <p>
+      The foundation is a single SQLite database opened with <code>OpenDB</code> &mdash; pure Go via <code>modernc.org/sqlite</code>, no CGO &mdash; in WAL mode with foreign keys on and a 256&nbsp;MB <code>mmap_size</code>. Migrations are versioned in <code>internal/memory/db.go</code>: version&nbsp;1 creates <code>sessions</code>, <code>observations</code>, and <code>session_summaries</code> with their indexes; version&nbsp;2 adds <code>observations_fts</code> and <code>session_summaries_fts</code> FTS5 virtual tables plus insert/update/delete sync triggers so the full-text index stays in lockstep with the base tables.
+    </p>
+
+    <p>
+      Capture is non-blocking. <code>BuildAfterToolCallback</code> in <code>internal/memory/worker.go</code> wraps every successful tool call into a <code>RawObservation</code> and pushes it onto a buffered channel (<code>NewWorker</code>, default buffer 100). A background goroutine drains that channel: it runs <code>StripPrivateFromMap</code> to redact <code>&lt;private&gt;...&lt;/private&gt;</code> spans, calls a <code>Compressor</code> to produce a structured <code>Observation</code>, and stores it. Failed compression falls back to <code>fallbackObservation</code> so nothing is lost. An <code>ObservationBridge</code> then routes the stored observation into the palace as a <code>DrawerInput</code> via the <code>AfterStoreHook</code> &mdash; deriving <code>Wing</code> from the project basename, <code>Room</code> from the first source file&rsquo;s directory, <code>Hall</code> from the observation type, and <code>Importance</code> from a per-type map (decisions&nbsp;8, bugfixes/features&nbsp;7, discoveries&nbsp;6, refactors&nbsp;5, changes&nbsp;4).
+    </p>
+
+    <h2>Layer 2: semantic embeddings</h2>
+
+    <p>
+      Above the facts sits a vector index. The <code>Embedder</code> interface (<code>Embed(texts []string) ([][]float32, error)</code>) has two implementations: <code>localEmbedder</code> runs <code>sentence-transformers/all-MiniLM-L6-v2</code> in-process through <code>hugot</code>, and <code>ollamaEmbedder</code> delegates to a local Ollama daemon. Ollama is tried first when <code>UseOllama</code> is on (the default) because it is faster and retrieves better; the in-process model is the no-daemon fallback. Inputs are truncated to <code>maxCharLength = 512</code> (the model&rsquo;s 128-token cap) to stay within GoMLX sequence buckets.
+    </p>
+
+    <p>
+      The default build is pure Go with no native libraries. Building with the <code>ORT</code> tag swaps in ONNX Runtime with CoreML on Apple silicon, where the int8 quantized model runs on the Neural Engine. <code>DetectPlatformOnnxFile</code> picks the right weights file for the compiled backend &mdash; fp32 for pure Go (int8 kernels don&rsquo;t exist there and run ~3x slower), int8 for ORT. Picking the wrong pair silently costs a large multiple of runtime, which is why <code>ModelReady</code> checks for the <em>specific</em> file rather than merely the directory. <code>CosineSimilarity</code> ranks candidates; <code>FindDuplicates</code> with <code>DeduplicationThreshold = 0.9</code> keeps near-identical drawers out of the index. Download the model with:
+    </p>
+
+    <pre><code><span class="comment"># Fetch all-MiniLM-L6-v2 to the default cache</span>
+<span class="prompt">$</span> pi memory model download
+
+<span class="comment"># Check which backend and weights are in place</span>
+<span class="prompt">$</span> pi memory model status</code></pre>
+
+    <h2>Layer 3: temporal knowledge graph</h2>
+
+    <p>
+      The third layer is a temporal triple store in <code>internal/palace/kg.go</code>. <code>KnowledgeGraph.Add</code> takes a <code>TripleInput{Subject, Predicate, Object, ValidFrom}</code>, auto-creates the subject and object <code>Entity</code> rows (<code>INSERT OR IGNORE</code>), and inserts a <code>Triple</code> with a deterministic <code>tripleID</code>. Adding an identical active triple is idempotent &mdash; it returns the existing one rather than duplicating. When the world changes, <code>KnowledgeGraph.Invalidate</code> sets <code>valid_to = now()</code> on the matching active triple instead of deleting it, so history is preserved.
+    </p>
+
+    <p>
+      Queries respect time. <code>KnowledgeGraph.Query(entity, asOf, direction)</code> filters to triples valid at a given moment; <code>direction</code> can be <code>"subject"</code>, <code>"object"</code>, or both. <code>KnowledgeGraph.Timeline</code> returns every triple for an entity in chronological order. The <code>Graph</code> type in <code>graph.go</code> sits on top of the drawers themselves: <code>Graph.Traverse(startRoom, maxHops)</code> does a BFS through rooms linked by shared wings, and <code>Graph.FindTunnels</code> surfaces rooms that bridge multiple wings &mdash; the cross-project concepts that would otherwise be invisible. Inspect the graph from the CLI:
+    </p>
+
+    <pre><code><span class="comment"># Add a fact: server uses sqlite for storage</span>
+<span class="prompt">$</span> pi memory kg add server uses sqlite
+
+<span class="comment"># Query what &lsquo;sqlite&rsquo; is involved in, as of a date</span>
+<span class="prompt">$</span> pi memory kg query sqlite
+
+<span class="comment"># Full chronological history for an entity</span>
+<span class="prompt">$</span> pi memory kg timeline server</code></pre>
+
+    <h2>Layer 4: background project miners</h2>
+
+    <p>
+      The fourth layer builds the index while you do something else. <code>MineProject</code> in <code>internal/palace/miner_project.go</code> walks a directory in five phases: collect mineable files, flatten to chunks, drop unchanged chunks, embed, and persist. It respects <code>.gitignore</code> (preferring <code>git ls-files --others --ignored --exclude-standard</code> for nested patterns, <code>**</code> globs, and negation), skips <code>node_modules</code>/<code>vendor</code>/<code>.git</code>/<code>dist</code> and friends, sniffs binaries by NUL byte, and ignores files over 512&nbsp;KB. Only a curated extension list is mined &mdash; <code>.go</code>, <code>.ts</code>, <code>.py</code>, <code>.rs</code>, <code>.md</code>, <code>.yaml</code>, <code>.proto</code>, and so on.
+    </p>
+
+    <p>
+      Chunks are <code>defaultChunkSize = 512</code> characters with <code>defaultChunkOverlap = 64</code> &mdash; calibrated to the embedder&rsquo;s 128-token cap so the tail of each chunk actually influences its vector instead of being silently dropped. <code>dropUnchangedChunks</code> compares each chunk&rsquo;s <code>ContentHash</code> against the stored hash before embedding, which is where ~80% of a mining run&rsquo;s CPU goes &mdash; so re-mining after a one-file change re-embeds only that file. Embedding fans out across <code>embedWorkers</code> (roughly <code>NumCPU/3</code>, capped), each owning its own embedder instance because <code>hugot</code> pipelines aren&rsquo;t safe to call concurrently; a shared embedder was what previously limited the run to ~25% CPU. Drawers are written in one transaction via <code>BatchInsertDrawers</code>, falling back to per-row inserts so one bad row can&rsquo;t lose the whole batch. Room detection comes from <code>mempalace.yaml</code> if present, else the first directory component.
+    </p>
+
+    <pre><code><span class="comment"># Initialize a palace database for the current project</span>
+<span class="prompt">$</span> pi memory init .
+
+<span class="comment"># Mine files into drawers (re-runs skip unchanged chunks)</span>
+<span class="prompt">$</span> pi memory mine .
+
+<span class="comment"># See drawer / wing / room / KG counts</span>
+<span class="prompt">$</span> pi memory status</code></pre>
+
+    <h2>How it stays out of the way</h2>
+
+    <p>
+      The palace is built to never be on the critical path. Capture is a non-blocking enqueue that drops and logs rather than stalls if the channel is full. Compression runs on a background goroutine through the <code>memory-compressor</code> subagent (a small model), and the <code>ObservationBridge</code> logs and swallows its own errors so a palace failure can never block the observation pipeline. Every layer is independently optional: a palace with no embedder still serves FTS5 keyword search; a palace with no model still serves L0/L1/L2 from the database. The <code>ContextGenerator</code> in <code>internal/memory/context.go</code> builds the injected context from the last 72 hours of observations for a project, capped at a token budget (default 8000), so the system prompt never balloons. Privacy is enforced before storage with <code>StripPrivate</code> replacing <code>&lt;private&gt;...&lt;/private&gt;</code> spans with <code>[PRIVATE]</code>.
+    </p>
+
+    <h2>How the agent queries it</h2>
+
+    <p>
+      Inside a session the agent reaches the palace through two tool surfaces. From the observation store, <code>CoreTools()</code> registers <code>mem-search</code>, <code>mem-timeline</code>, and <code>mem-get</code> &mdash; a three-step workflow: <code>mem-search(query)</code> returns a compact ranked index (~50&ndash;100 tokens/result) of <code>SearchResultRow</code>s with <code>ReadCost</code> and <code>WorkCost</code> columns; <code>mem-timeline(anchor=ID)</code> returns chronological context around a hit; <code>mem-get(ids=[...])</code> pulls full <code>Observation</code> bodies for the filtered few. From the palace itself, <code>PalaceTools(p)</code> registers eleven ADK tools when a palace is loaded &mdash; <code>palace_status</code>, <code>palace_search</code>, <code>palace_add_drawer</code>, <code>palace_kg_add</code>, <code>palace_kg_query</code>, <code>palace_kg_invalidate</code>, <code>palace_kg_timeline</code>, <code>palace_kg_extract</code>, <code>palace_diary_write</code>, <code>palace_diary_read</code>, and <code>palace_traverse</code>. Returns <code>nil</code> when the palace is disabled, so the agent simply doesn&rsquo;t see those tools.
+    </p>
+
+    <h2>What it costs</h2>
+
+    <p>
+      Storage is one SQLite file per palace (<code>PalaceConfig.DBPath</code>, default <code>palace.db</code>) plus the shared observation DB under <code>~/.pi-go/memory/</code>. The embedding model is <code>all-MiniLM-L6-v2</code> &mdash; ~90&nbsp;MB of weights &mdash; downloaded once via <code>pi memory model download</code>. On an M2 Max mining this repo with the fp32 model, a full run of ~17,700 chunks takes about 43 minutes at 6.9 chunks/sec with batch size 8 and four workers; incremental re-runs skip unchanged chunks and finish in seconds. The Ollama backend is an order of magnitude faster. In-session cost is the L1 budget (3200 chars) plus whatever L2/L3 the agent chooses to pull &mdash; never the whole palace. Everything degrades gracefully: lose the embedder and you keep keyword search; lose the palace and you keep the observation store; lose both and pi-go is just a stateless agent that re-reads disk.
+    </p>
+
+    <div class="cta">
+      <h3>Try pi-go</h3>
+      <p>Open source, MIT licensed, one binary away.</p>
+
+      <div class="cta-buttons">
+        <a class="btn btn-primary" href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">View on GitHub</a>
+        <a class="btn btn-secondary" href="/#install">Quick Install</a>
+      </div>
+    </div>
+  </article>
+
+  <footer>
+    <a href="/">Home</a>
+    <a href="/blog.html">Blog</a>
+    <a href="/feed.xml">RSS</a>
+    <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">GitHub</a>
+    <div style="margin-top: 0.8rem;">&copy; 2026 pi-go &mdash; dimetron</div>
+  </footer>
+</body>

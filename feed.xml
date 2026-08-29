@@ -6,7 +6,61 @@
     <atom:link href="https://pi-go.sh/feed.xml" rel="self" type="application/rss+xml" />
     <description>Updates, ideas, and release notes from the pi-go project — a terminal AI coding agent built on Google ADK Go.</description>
     <language>en-us</language>
-    <lastBuildDate>Mon, 24 Aug 2026 12:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 29 Aug 2026 12:00:00 +0000</lastBuildDate>
+    <item>
+      <title>Subagents: fanning out work without losing the thread</title>
+      <link>https://pi-go.sh/blog/subagent-system.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/subagent-system.html</guid>
+      <pubDate>Sat, 29 Aug 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        pi-go's subagent system dispatches typed roles over ACP with worktree isolation and concurrency guardrails.
+      ]]></description>
+    </item>
+    <item>
+      <title>Memory Palace: four layers of context</title>
+      <link>https://pi-go.sh/blog/memory-palace.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/memory-palace.html</guid>
+      <pubDate>Sat, 29 Aug 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        pi-go's Memory Palace combines SQLite facts, semantic embeddings, a temporal knowledge graph, and background miners.
+      ]]></description>
+    </item>
+    <item>
+      <title>The DeepSeek and GLM-5.3 effect</title>
+      <link>https://pi-go.sh/blog/deepseek-glm53-growth.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/deepseek-glm53-growth.html</guid>
+      <pubDate>Sat, 29 Aug 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        Switching pi-go's default model to DeepSeek and adding GLM-5.3 tripled my agent usage.
+      ]]></description>
+    </item>
+    <item>
+      <title>Running Mistral in a multi-provider CLI</title>
+      <link>https://pi-go.sh/blog/mistral-provider-pitfalls.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/mistral-provider-pitfalls.html</guid>
+      <pubDate>Sat, 29 Aug 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        Adding the Mistral provider to pi-go was a series of small, sharp lessons.
+      ]]></description>
+    </item>
+    <item>
+      <title>Your coding agent should draw diagrams</title>
+      <link>https://pi-go.sh/blog/mermaid-in-the-terminal.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/mermaid-in-the-terminal.html</guid>
+      <pubDate>Sat, 29 Aug 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        I taught pi-go to draw Mermaid diagrams in the terminal.
+      ]]></description>
+    </item>
+    <item>
+      <title>Five coding agents, one protocol</title>
+      <link>https://pi-go.sh/blog/antigravity-acp.html</link>
+      <guid isPermaLink="true">https://pi-go.sh/blog/antigravity-acp.html</guid>
+      <pubDate>Sat, 29 Aug 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        Wiring Google Antigravity into the Agent Client Protocol sounded like a one-afternoon job. It wasn't.
+      ]]></description>
+    </item>
     <generator>hand-rolled</generator>
 
     <item>

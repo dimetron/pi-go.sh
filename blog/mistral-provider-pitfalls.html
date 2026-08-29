@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Running Mistral in a multi-provider CLI — pi-go blog</title>
+  <meta name="description" content="Adding the Mistral provider to pi-go was a series of small, sharp lessons.">
+  <link rel="alternate" type="application/rss+xml" title="pi-go blog RSS" href="/feed.xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a12;
+      --surface: rgba(15, 15, 30, 0.7);
+      --text: #e0e0f0;
+      --text-secondary: #8888aa;
+      --neon-cyan: #00f0ff;
+      --neon-magenta: #ff00aa;
+      --neon-purple: #b347ff;
+      --neon-green: #00ff88;
+      --neon-yellow: #ffe600;
+      --border: rgba(0, 240, 255, 0.12);
+      --border-strong: rgba(0, 240, 255, 0.25);
+      --code-bg: rgba(10, 10, 20, 0.9);
+      --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 60px rgba(0, 240, 255, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.75;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0, 0, 0, 0.05) 2px, rgba(0, 0, 0, 0.05) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 2rem;
+      backdrop-filter: blur(20px) saturate(1.5);
+      background: rgba(10, 10, 18, 0.75);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.25rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      text-decoration: none;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+    .logo span {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 12px var(--neon-cyan);
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 1.8rem; }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    .nav-cta {
+      background: linear-gradient(135deg, var(--neon-magenta), var(--neon-purple));
+      color: #fff !important;
+      padding: 0.55rem 1.1rem;
+      border-radius: 6px;
+      text-shadow: none !important;
+      box-shadow: 0 0 20px rgba(255, 0, 170, 0.3);
+    }
+
+    article {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 7rem 1.5rem 3rem;
+    }
+
+    .breadcrumb {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+    .breadcrumb a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+    }
+    .breadcrumb a:hover { text-shadow: 0 0 8px var(--neon-cyan); }
+
+    .post-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .post-meta .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 4.5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .lede {
+      font-size: 1.25rem;
+      color: var(--text);
+      margin-bottom: 2.5rem;
+      padding-left: 1rem;
+      border-left: 3px solid var(--neon-cyan);
+      box-shadow: -6px 0 20px -10px var(--neon-cyan);
+    }
+
+    h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin: 2.5rem 0 1rem;
+      color: var(--text);
+      position: relative;
+      padding-left: 1.1rem;
+    }
+    h2::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.4em;
+      bottom: 0.4em;
+      width: 3px;
+      background: linear-gradient(180deg, var(--neon-magenta), var(--neon-purple));
+      box-shadow: 0 0 10px var(--neon-magenta);
+    }
+
+    p {
+      margin-bottom: 1.2rem;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    ul {
+      margin: 0 0 1.5rem 1.5rem;
+      color: var(--text);
+    }
+    ul li { margin-bottom: 0.5rem; }
+    ul li::marker { color: var(--neon-cyan); }
+
+    strong { color: var(--neon-cyan); font-weight: 600; }
+    a { color: var(--neon-cyan); text-decoration: none; border-bottom: 1px dashed rgba(0, 240, 255, 0.4); }
+    a:hover { text-shadow: 0 0 8px var(--neon-cyan); }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92em;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 0.12em 0.45em;
+      border-radius: 4px;
+      color: var(--neon-green);
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      margin: 1.2rem 0 1.8rem;
+      box-shadow: var(--glow-cyan);
+    }
+    pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: #cdd6f4;
+    }
+    pre .prompt { color: var(--neon-cyan); user-select: none; }
+    pre .comment { color: #555577; }
+
+    .cta {
+      margin: 3rem 0 1rem;
+      padding: 1.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: var(--glow-cyan);
+    }
+    .cta h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      margin-bottom: 0.6rem;
+    }
+    .cta-buttons {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 0;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      color: #0a0a12;
+      box-shadow: var(--glow-cyan);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--neon-cyan);
+      border: 1px solid var(--border-strong);
+    }
+    .btn:hover { transform: translateY(-2px); }
+
+    footer {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    footer a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+      border-bottom: 0;
+      margin: 0 0.5rem;
+    }
+
+    @media (max-width: 640px) {
+      nav { padding: 0.8rem 1.2rem; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      article { padding: 6rem 1.2rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">PI-GO<span>.SH</span></a>
+    <div class="nav-links">
+      <a href="/#features">Features</a>
+      <a href="/#install">Install</a>
+      <a href="/blog.html" class="active">Blog</a>
+      <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="nav-cta">GitHub</a>
+    </div>
+  </nav>
+
+  <article>
+    <div class="post-meta">
+      <span class="dot"></span>
+      <time datetime="2026-08-29">Aug 29, 2026</time>
+      <span>·</span>
+      <span>Deep dive</span>
+    </div>
+
+    <h1>Running Mistral in a multi-provider CLI: prefix routing, prompt caching, and finish reasons</h1>
+
+    <p class="lede">
+      Adding a new LLM provider to a tool that already speaks to Claude, OpenAI, Gemini, and Grok sounds mechanical &mdash; implement the request, map the response, ship it. The Mistral integration in pi-go turned out to be a series of small, sharp lessons, each one a bug that only shows up against the live API, never in a unit test.
+    </p>
+
+    <p><img src="media/mistral-thinking.gif" alt="The Mistral provider test suite passing" style="width:100%;border-radius:8px;margin:1.5rem 0;"></p>
+
+    <h2>Lesson 1: <code>prompt_mode</code> is not <code>reasoning_effort</code></h2>
+
+    <p>
+      pi-go&rsquo;s default thinking level is &ldquo;high&rdquo;. When the Mistral provider was first written, it translated that into <code>prompt_mode: "reasoning"</code> on the wire for the <code>magistral</code> family &mdash; because the reference implementation the plan was drawn from uses Mistral&rsquo;s <em>conversations</em> API, which takes <code>prompt_mode</code>.
+    </p>
+
+    <p>
+      But chat completions is a different endpoint. It answers:
+    </p>
+
+    <pre><code>400 "Reasoning prompt mode is not enabled for this model" (code 3051)</code></pre>
+
+    <p>
+      on <strong>every</strong> magistral request. The field belongs to the conversations API, not this one. The fix was to delete the <code>prompt_mode</code> branch entirely &mdash; magistral takes <code>reasoning_effort</code> like everything else.
+    </p>
+
+    <p>
+      The lesson: when you copy a reference implementation, check <em>which API</em> it targets. The field names look similar, the docs are ambiguous, and the 400 only appears against the real endpoint.
+    </p>
+
+    <h2>Lesson 2: an allowlist is a trap in both directions</h2>
+
+    <p>
+      <code>reasoning_effort</code> isn&rsquo;t accepted by every Mistral model. The allowlist was short, and <code>mistral-medium-latest</code> &mdash; the alias most users actually type &mdash; wasn&rsquo;t on it. So <code>--think high</code> was silently dropped on the most popular model.
+    </p>
+
+    <p>
+      The tempting fix is prefix-matching: <code>strings.HasPrefix(name, "mistral-medium-")</code>. That&rsquo;s wrong, and the reason is subtle. <code>mistral-medium-2505</code> and <code>mistral-medium-2508</code> answer 400 for <code>reasoning_effort</code>. The two failure directions are <strong>not symmetric</strong>:
+    </p>
+
+    <ul>
+      <li>a <em>missing</em> entry costs you thinking control on that model (silent, annoying);</li>
+      <li>a <em>wrong</em> entry kills every request to that model (loud, catastrophic).</li>
+    </ul>
+
+    <p>
+      So the allowlist stays exact-match on purpose, and an id is listed only once it has been seen to work. The set was verified by probing every small/medium/magistral id in the embedded catalog against the live API &mdash; not by reading the docs, which name neither the rejecting tags nor magistral&rsquo;s actual field.
+    </p>
+
+    <h2>Lesson 3: finish reasons get swallowed, and the TUI lies to you</h2>
+
+    <p>
+      Mistral&rsquo;s <code>finish_reason</code> enum is <code>stop | length | model_length | error | tool_calls</code>. The shared mapper handled <code>length</code> and <code>content_filter</code> and defaulted everything else to <code>Stop</code>. So <code>model_length</code> and <code>error</code> were reported as clean completions.
+    </p>
+
+    <p>
+      That&rsquo;s user-visible, and it&rsquo;s worse than it sounds. The TUI warns about a truncated reply by watching for <code>FinishReasonMaxTokens</code>. So a Mistral turn cut off at the context limit was presented as a <em>finished</em> one &mdash; a turn that just looked short, with nothing said about why. And <code>finish_reason: "error"</code> means generation failed partway; reporting it as <code>Stop</code> claims a success the provider never gave.
+    </p>
+
+    <p>
+      The real bug was structural: a <code>mistralFinishReasonToGenai</code> wrapper existed and looked like it owned the mapping, but nothing on the request path called it. The runners called the shared mapper directly. Its test passed while the real path was wrong. The wrapper is gone, and the test now exercises the mapper that actually runs, across the full Mistral enum.
+    </p>
+
+    <h2>Lesson 4: thinking arrives in the content field, not <code>delta.reasoning</code></h2>
+
+    <p>
+      Mistral reasoning models don&rsquo;t use <code>delta.reasoning</code> the way OpenRouter does. Thinking arrives inside the <code>content</code> field, which switches from a string to a list of typed chunks for the duration of the thinking phase:
+    </p>
+
+    <pre><code>[{ "type": "thinking", "thinking": [{ "type": "text", "text": "..." }] }]</code></pre>
+
+    <p>
+      The provider has to reassemble those chunks, concatenate the thinking text, and extract it from both streaming deltas and non-streaming responses. And because the <code>openai-go</code> SDK has no fields for <code>prompt_cache_key</code> or <code>reasoning_effort</code>, both go on the wire as extra JSON fields &mdash; one call, not two.
+    </p>
+
+    <h2>What a unit test can&rsquo;t catch</h2>
+
+    <p>
+      The recurring theme is that none of these bugs are visible to a unit test. A unit test only sees the body pi-go <em>built</em> &mdash; never Mistral&rsquo;s verdict on it. The <code>prompt_mode</code> 400, the allowlist gaps, and the finish-reason swallowing all needed a live request to surface.
+    </p>
+
+    <p>
+      That&rsquo;s why the e2e test drives one model per class through a real request at the default thinking level. It fails against the previous code with the exact 400 above. If you&rsquo;re adding a provider, budget for a live-API test from day one &mdash; the docs will not save you, and neither will your mocks.
+    </p>
+
+    <div class="cta">
+      <h3>Try pi-go</h3>
+      <p>Open source, MIT licensed, one binary away.</p>
+
+      <div class="cta-buttons">
+        <a class="btn btn-primary" href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">View on GitHub</a>
+        <a class="btn btn-secondary" href="/#install">Quick Install</a>
+      </div>
+    </div>
+  </article>
+
+  <footer>
+    <a href="/">Home</a>
+    <a href="/blog.html">Blog</a>
+    <a href="/feed.xml">RSS</a>
+    <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">GitHub</a>
+    <div style="margin-top: 0.8rem;">&copy; 2026 pi-go &mdash; dimetron</div>
+  </footer>
+</body>
