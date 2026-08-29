@@ -3,7 +3,7 @@ languageCode = "en-us"
 title = "pi-go"
 description = "A terminal AI coding agent built on Google ADK Go."
 
-# The blog lives under /blog/. RSS at /blog/index.xml (Hugo default) and also
+# The blog lives under /blog/. RSS at /blog/feed.xml and also
 # aliased to /feed.xml for existing subscribers.
 [permalinks]
   blog = "/blog/:slugorfilename/"
