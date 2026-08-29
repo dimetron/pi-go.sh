@@ -44,3 +44,15 @@ description = "A terminal AI coding agent built on Google ADK Go."
   home = ["rss"]
   section = ["html", "rss"]
   page = ["html"]
+
+# `docs/` lives at the repo root (the .tape rebuild scripts write there), but
+# Hugo only publishes `static/`. Mount it so the landing page's images ship.
+# Declaring static mounts replaces the default for that component only, so the
+# normal `static` mount is re-declared here alongside it.
+[module]
+  [[module.mounts]]
+    source = "static"
+    target = "static"
+  [[module.mounts]]
+    source = "docs"
+    target = "static/docs"
