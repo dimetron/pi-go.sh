@@ -1,0 +1,46 @@
+baseURL = "https://pi-go.sh/"
+languageCode = "en-us"
+title = "pi-go"
+description = "A terminal AI coding agent built on Google ADK Go."
+
+# The blog lives under /blog/. RSS at /blog/index.xml (Hugo default) and also
+# aliased to /feed.xml for existing subscribers.
+[permalinks]
+  blog = "/blog/:slugorfilename/"
+
+[[menu.main]]
+  name = "Features"
+  url = "/#features"
+  weight = 1
+
+[[menu.main]]
+  name = "Install"
+  url = "/#install"
+  weight = 2
+
+[[menu.main]]
+  name = "Blog"
+  url = "/blog/"
+  weight = 3
+
+[[menu.main]]
+  name = "GitHub"
+  url = "https://github.com/dimetron/pi-go"
+  weight = 4
+
+[markup.goldmark.renderer]
+  unsafe = true
+
+[markup.highlight]
+  style = "monokai"
+  lineNos = false
+
+[outputFormats]
+  [outputFormats.rss]
+    mediatype = "application/rss+xml"
+    baseName = "feed"
+
+[outputs]
+  home = ["html", "rss"]
+  section = ["html", "rss"]
+  page = ["html"]

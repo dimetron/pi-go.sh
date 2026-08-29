@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pi-go — Terminal AI Coding Agent</title>
+  <meta name="description" content="A terminal-based coding agent built on Google ADK Go with multi-provider LLM support, sandboxed tools, and Memory Palace.">
+  <link rel="alternate" type="application/rss+xml" title="pi-go blog RSS" href="/feed.xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a12;
+      --bg-alt: #0d0d1a;
+      --surface: rgba(15, 15, 30, 0.7);
+      --surface-solid: #0f0f1e;
+      --text: #e0e0f0;
+      --text-secondary: #8888aa;
+      --neon-cyan: #00f0ff;
+      --neon-magenta: #ff00aa;
+      --neon-purple: #b347ff;
+      --neon-green: #00ff88;
+      --neon-yellow: #ffe600;
+      --neon-orange: #ff6a00;
+      --border: rgba(0, 240, 255, 0.12);
+      --border-strong: rgba(0, 240, 255, 0.25);
+      --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 60px rgba(0, 240, 255, 0.1);
+      --glow-magenta: 0 0 20px rgba(255, 0, 170, 0.3), 0 0 60px rgba(255, 0, 170, 0.1);
+      --glow-purple: 0 0 20px rgba(179, 71, 255, 0.3), 0 0 60px rgba(179, 71, 255, 0.1);
+      --code-bg: rgba(10, 10, 20, 0.9);
+      --code-text: #cdd6f4;
+      --code-keyword: #b347ff;
+      --code-fn: #00f0ff;
+      --code-string: #00ff88;
+      --code-comment: #555577;
+      --code-prompt: #00f0ff;
+      --code-flag: #ffe600;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-padding-top: 5rem; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.05) 2px,
+        rgba(0, 0, 0, 0.05) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 2rem;
+      backdrop-filter: blur(20px) saturate(1.5);
+      background: rgba(10, 10, 18, 0.75);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow 0.3s;
+    }
+
+    nav.scrolled {
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.08);
+      border-bottom-color: var(--border-strong);
+    }
+
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--neon-cyan);
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5), 0 0 30px rgba(0, 240, 255, 0.2);
+    }
+
+    .logo span { color: var(--neon-magenta); }
+
+    .nav-links { display: flex; align-items: center; gap: 1.8rem; }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+    }
+
+    .nav-cta {
+      background: transparent !important;
+      color: var(--neon-cyan) !important;
+      padding: 0.45rem 1.1rem;
+      border-radius: 2px;
+      border: 1px solid var(--neon-cyan) !important;
+      font-weight: 700 !important;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+      transition: all 0.2s !important;
+    }
+
+    .nav-cta:hover {
+      background: rgba(0, 240, 255, 0.1) !important;
+      box-shadow: var(--glow-cyan);
+      transform: translateY(-1px);
+    }
+    .nav-cta:active { transform: scale(0.97); }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 3rem;
+      padding: 6rem 4rem 4rem;
+      max-width: 1260px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      left: 50%;
+      transform: translateX(-50%);
+      background:
+        radial-gradient(ellipse 80% 50% at 30% 40%, rgba(179, 71, 255, 0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 70% 60%, rgba(0, 240, 255, 0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 50% at 50% 100%, rgba(255, 0, 170, 0.06) 0%, transparent 60%);
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .hero-left { z-index: 1; }
+
+    .hero-mascot {
+      width: 120px;
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+      filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.25)) drop-shadow(0 0 40px rgba(179, 71, 255, 0.15));
+    }
+
+    .hero-mascot img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .hero-right {
+      z-index: 1;
+      opacity: 0;
+      animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+    }
+
+    .hero-screenshot {
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.15), 0 16px 48px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-strong);
+      position: relative;
+    }
+
+    .hero-screenshot::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 4px;
+      padding: 1px;
+      background: linear-gradient(135deg, var(--neon-cyan), transparent 40%, transparent 60%, var(--neon-magenta));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .hero-screenshot img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* Animated particles */
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--neon-cyan);
+      animation: twinkle 3s ease-in-out infinite;
+    }
+
+    .star:nth-child(even) {
+      background: var(--neon-magenta);
+      box-shadow: 0 0 6px var(--neon-magenta);
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.1; transform: scale(0.5); }
+      50% { opacity: 1; transform: scale(1.5); }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px solid var(--border-strong);
+      border-radius: 2px;
+      padding: 0.4rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--neon-cyan);
+      margin-bottom: 1.5rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+    }
+
+    .hero-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--neon-green); }
+      50% { opacity: 0.4; box-shadow: 0 0 2px var(--neon-green); }
+    }
+
+    .hero h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: 0.5px;
+      margin-bottom: 1.2rem;
+      max-width: 700px;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+    }
+
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.3));
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      color: var(--text-secondary);
+      max-width: 560px;
+      line-height: 1.65;
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.5rem;
+      border-radius: 2px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      color: #000;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.5), 0 0 60px rgba(0, 240, 255, 0.2);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--neon-cyan);
+      border: 1px solid var(--neon-cyan);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 240, 255, 0.08);
+      box-shadow: var(--glow-cyan);
+    }
+
+    /* ── Install bar ── */
+    .install-bar {
+      margin-top: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+    }
+
+    .install-cmd {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      padding: 0.7rem 1.2rem;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s;
+      position: relative;
+      border: 1px solid var(--border);
+    }
+
+    .install-cmd:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+      border-color: var(--border-strong);
+    }
+    .install-cmd .prompt { color: var(--neon-cyan); }
+    .install-cmd .copy-icon { color: var(--code-comment); font-size: 0.8rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--neon-cyan);
+      color: #000;
+      padding: 0.6rem 1.2rem;
+      border-radius: 2px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transform: translateX(120%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 200;
+      box-shadow: var(--glow-cyan);
+    }
+
+    .toast.show { transform: translateX(0); }
+
+    /* ── Sections ── */
+    .section {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-header h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: 1px;
+      line-height: 1.2;
+      margin-bottom: 0.8rem;
+      text-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+    }
+
+    .section-header p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Pitch (feature list) ── */
+    .pitch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem 2.5rem;
+    }
+
+    .pitch-item {
+      display: grid;
+      grid-template-columns: 20px 1fr;
+      gap: 0.8rem;
+      align-items: start;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 1rem;
+      border-radius: 4px;
+      background: rgba(15, 15, 30, 0.4);
+      border: 1px solid transparent;
+      transition: opacity 0.5s, transform 0.5s, border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .pitch-item:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.05);
+    }
+
+    .pitch-item.visible { opacity: 1; transform: translateY(0); }
+
+    .pitch-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 0.45rem;
+    }
+
+    .pitch-item:nth-child(1) .pitch-dot { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+    .pitch-item:nth-child(2) .pitch-dot { background: var(--neon-magenta); box-shadow: 0 0 8px var(--neon-magenta); }
+    .pitch-item:nth-child(3) .pitch-dot { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
+    .pitch-item:nth-child(4) .pitch-dot { background: var(--neon-yellow); box-shadow: 0 0 8px var(--neon-yellow); }
+    .pitch-item:nth-child(5) .pitch-dot { background: var(--neon-purple); box-shadow: 0 0 8px var(--neon-purple); }
+    .pitch-item:nth-child(6) .pitch-dot { background: var(--neon-orange); box-shadow: 0 0 8px var(--neon-orange); }
+
+    .pitch-item h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      letter-spacing: 0.5px;
+    }
+
+    .pitch-item p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .pitch-item code {
+      color: var(--neon-cyan);
+      background: rgba(0, 240, 255, 0.08);
+      padding: 0.1em 0.4em;
+      border-radius: 2px;
+      font-size: 0.85em;
+    }
+
+    /* ── Provider chips ── */
+    .providers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1rem;
+      border-radius: 2px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: rgba(15, 15, 30, 0.6);
+      border: 1px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      opacity: 0;
+      animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      letter-spacing: 0.5px;
+    }
+
+    .chip:hover {
+      transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+      border-color: var(--border-strong);
+    }
+
+    .chip .icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: white;
+    }
+
+    /* ── Code showcase ── */
+    .code-section {
+      background: var(--bg-alt);
+      padding: 5rem 2rem;
+      position: relative;
+    }
+
+    .code-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      opacity: 0.3;
+    }
+
+    .code-showcase {
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+      margin-bottom: 2rem;
+      border: 1px solid var(--border);
+    }
+
+    .code-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.2rem;
+      background: rgba(5, 5, 15, 0.8);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .code-dot.red { background: #ff5f57; box-shadow: 0 0 4px #ff5f57; }
+    .code-dot.yellow { background: #febc2e; box-shadow: 0 0 4px #febc2e; }
+    .code-dot.green { background: #28c840; box-shadow: 0 0 4px #28c840; }
+
+    .code-title {
+      flex: 1;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .code-body {
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .code-body pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--code-text);
+    }
+
+    .kw { color: var(--code-keyword); }
+    .fn { color: var(--code-fn); text-shadow: 0 0 8px rgba(0, 240, 255, 0.3); }
+    .st { color: var(--code-string); }
+    .cm { color: var(--code-comment); }
+    .fl { color: var(--code-flag); }
+    .pr { color: var(--code-prompt); text-shadow: 0 0 6px rgba(0, 240, 255, 0.3); }
+    .op { color: #ff5577; }
+
+    /* ── Screenshot ── */
+    .screenshot-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0, 240, 255, 0.1), 0 12px 48px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-strong);
+    }
+
+    .screenshot-wrap img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* ── Architecture ── */
+    .arch-block {
+      background: rgba(15, 15, 30, 0.6);
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      padding: 2rem;
+      max-width: 700px;
+      margin: 0 auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .arch-block pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--neon-cyan);
+      overflow-x: auto;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+
+    /* ── Cards grid ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .card {
+      background: rgba(15, 15, 30, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.5rem;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.3s;
+      backdrop-filter: blur(10px);
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.08);
+      border-color: var(--border-strong);
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .card h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.5px;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.55;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--bg-alt);
+      padding: 4rem 2rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    footer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--neon-magenta), transparent);
+      opacity: 0.3;
+    }
+
+    .footer-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    footer h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.3rem, 3vw, 1.8rem);
+      font-weight: 800;
+      margin-bottom: 0.8rem;
+      letter-spacing: 1px;
+      text-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+    }
+
+    footer .sub {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      font-size: 1rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+    }
+
+    .footer-copy {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      opacity: 0.5;
+    }
+
+    /* ── Reveal animation ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Glitch effect on hover ── */
+    .logo:hover {
+      animation: glitch 0.3s ease;
+    }
+
+    @keyframes glitch {
+      0% { text-shadow: 0 0 10px rgba(0, 240, 255, 0.5), 0 0 30px rgba(0, 240, 255, 0.2); }
+      20% { text-shadow: -2px 0 var(--neon-magenta), 2px 0 var(--neon-cyan); }
+      40% { text-shadow: 2px 0 var(--neon-magenta), -2px 0 var(--neon-cyan); }
+      60% { text-shadow: -1px 0 var(--neon-green), 1px 0 var(--neon-purple); }
+      80% { text-shadow: 1px 0 var(--neon-magenta), -1px 0 var(--neon-cyan); }
+      100% { text-shadow: 0 0 10px rgba(0, 240, 255, 0.5), 0 0 30px rgba(0, 240, 255, 0.2); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .pitch-grid { grid-template-columns: 1fr; }
+      .nav-links a:not(.nav-cta):not([href="#features"]) { display: none; }
+      nav { padding: 0.8rem 1.2rem; }
+      .section { padding: 3.5rem 1.2rem; }
+      .code-section { padding: 3.5rem 1.2rem; }
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 5rem 1.2rem 3rem;
+        text-align: center;
+      }
+      .hero-actions { justify-content: center; }
+      .hero-mascot { margin-left: auto; margin-right: auto; }
+      .hero-right { text-align: center; }
+      .install-bar { text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-actions { flex-direction: column; align-items: center; }
+      .btn { width: 100%; justify-content: center; }
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav id="nav">
+    <a href="#" class="logo">PI-GO<span>.SH</span></a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#architecture">Architecture</a>
+      <a href="/blog.html">Blog</a>
+      <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="nav-cta">GitHub</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="top">
+    <div class="hero-bg">
+      <div class="star" style="top:12%;left:8%;animation-delay:0s"></div>
+      <div class="star" style="top:25%;left:75%;animation-delay:0.8s"></div>
+      <div class="star" style="top:18%;left:42%;animation-delay:1.6s"></div>
+      <div class="star" style="top:60%;left:15%;animation-delay:0.4s"></div>
+      <div class="star" style="top:45%;left:88%;animation-delay:2.1s"></div>
+      <div class="star" style="top:70%;left:55%;animation-delay:1.2s"></div>
+      <div class="star" style="top:35%;left:28%;animation-delay:0.6s"></div>
+      <div class="star" style="top:80%;left:72%;animation-delay:1.8s"></div>
+    </div>
+
+    <div class="hero-left">
+      <div class="hero-badge">
+        <span class="dot"></span>
+        Built on Google ADK Go
+      </div>
+
+      <h1>Your <span class="gradient">AI coding agent</span>, in the terminal</h1>
+
+      <p class="hero-sub">
+        Multi-provider LLMs, sandboxed tool execution, persistent memory, and a beautiful TUI.
+        All from a single binary.
+      </p>
+
+      <div class="hero-actions">
+        <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          View on GitHub
+        </a>
+        <a href="#install" class="btn btn-secondary">Quick Install</a>
+      </div>
+
+      <div class="install-bar">
+        <div class="install-cmd" onclick="copyInstall(this)" title="Click to copy">
+          <span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash
+          <span class="copy-icon">&#x2398;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="hero-screenshot">
+        <img src="docs/pi-go.gif" alt="pi-go terminal UI — minimax-m3:cloud model with Ollama">
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-header reveal">
+      <div class="hero-mascot" style="margin-left:auto;margin-right:auto;">
+        <img src="docs/pi-go-mascot.png" alt="pi-go mascot">
+      </div>
+      <h2>Everything you need in one binary</h2>
+      <p>A fully-featured coding agent that respects your terminal workflow</p>
+    </div>
+
+    <div class="pitch-grid">
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Multi-Provider LLM</h3>
+          <p>Claude, GPT, Gemini, Mistral, OpenCode, OpenRouter, and Ollama (local or cloud). Switch providers mid-conversation with a slash command.</p>
+        </div>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Sandboxed Tools</h3>
+          <p>File read/write/edit, shell execution, grep, find, tree, and git &mdash; all restricted to the project directory via <code>os.Root</code>.</p>
+        </div>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Memory Palace</h3>
+          <p>4-layer contextual memory with SQLite, semantic embeddings, temporal knowledge graph, and project miners.</p>
+        </div>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>LSP Integration</h3>
+          <p>JSON-RPC client for Go, TypeScript, Python, and Rust with auto-format and diagnostics hooks.</p>
+        </div>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Subagent System</h3>
+          <p>Process-based multi-agent orchestration with types: explore, plan, designer, reviewer, and task runners.</p>
+        </div>
+      </div>
+      <div class="pitch-item">
+        <div class="pitch-dot"></div>
+        <div>
+          <h3>Session Branching</h3>
+          <p>JSONL append-only event logs with branching, compaction, and resume. Fork conversations and switch paths.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="providers reveal">
+      <div class="chip" style="animation-delay:0.1s">
+        <span class="icon" style="background:#b45309">A</span> Anthropic
+      </div>
+      <div class="chip" style="animation-delay:0.2s">
+        <span class="icon" style="background:#0f766e">O</span> OpenAI
+      </div>
+      <div class="chip" style="animation-delay:0.3s">
+        <span class="icon" style="background:#4338ca">G</span> Gemini
+      </div>
+      <div class="chip" style="animation-delay:0.4s">
+        <span class="icon" style="background:#7c3aed">M</span> Mistral
+      </div>
+      <div class="chip" style="animation-delay:0.5s">
+        <span class="icon" style="background:#0ea5e9">K</span> OpenCode
+      </div>
+      <div class="chip" style="animation-delay:0.6s">
+        <span class="icon" style="background:#71717a">L</span> Ollama
+      </div>
+      <div class="chip" style="animation-delay:0.7s">
+        <span class="icon" style="background:#0d9488">R</span> OpenRouter
+      </div>
+    </div>
+  </section>
+
+  <!-- Code showcase -->
+  <section class="code-section" id="install">
+    <div class="code-showcase">
+      <div class="section-header reveal">
+        <h2>Up and running in seconds</h2>
+        <p>One command to install. One binary to run.</p>
+      </div>
+
+      <div class="code-block reveal">
+        <div class="code-titlebar">
+          <div class="code-dot red"></div>
+          <div class="code-dot yellow"></div>
+          <div class="code-dot green"></div>
+          <span class="code-title">terminal</span>
+        </div>
+        <div class="code-body">
+<pre><span class="cm"># Linux and macOS</span>
+<span class="pr">$</span> curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash
+
+<span class="cm"># Windows PowerShell</span>
+<span class="pr">PS&gt;</span> powershell -NoProfile -Command "iwr https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.ps1 -UseBasicParsing | iex"
+
+<span class="cm"># Or with go install</span>
+<span class="pr">$</span> go install github.com/dimetron/pi-go/cmd/pi@latest
+
+<span class="cm"># Start interactive mode</span>
+<span class="pr">$</span> pi
+
+<span class="cm"># Select a model</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">claude-sonnet-5</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">gpt-5.6-sol</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">gemini:gemini-3.6-flash</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">ollama/gemma4:12b-mlx</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">ollama/deepseek-v4-flash:0731:cloud</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">minimax-m3:cloud</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">opencode/kimi-k3</span>
+<span class="pr">$</span> pi <span class="fl">--model</span> <span class="st">openrouter/google/gemini-3.7-flash</span>
+
+<span class="cm"># Use model roles</span>
+<span class="pr">$</span> pi <span class="fl">--smol</span>          <span class="cm"># fast, cheap model</span>
+<span class="pr">$</span> pi <span class="fl">--slow</span>          <span class="cm"># most capable model</span>
+<span class="pr">$</span> pi <span class="fl">--plan</span>          <span class="cm"># planning-oriented model</span></pre>
+        </div>
+      </div>
+
+      <div class="code-block reveal">
+        <div class="code-titlebar">
+          <div class="code-dot red"></div>
+          <div class="code-dot yellow"></div>
+          <div class="code-dot green"></div>
+          <span class="code-title">slash commands</span>
+        </div>
+        <div class="code-body">
+<pre><span class="pr">/model</span>         <span class="cm">Switch model mid-conversation</span>
+<span class="pr">/session</span>       <span class="cm">List and switch sessions</span>
+<span class="pr">/branch</span>        <span class="cm">Create a conversation branch</span>
+<span class="pr">/commit</span>        <span class="cm">AI-generated conventional commits</span>
+<span class="pr">/compact</span>       <span class="cm">Compact session history</span>
+<span class="pr">/plan</span>          <span class="cm">Start PDD planning session</span>
+<span class="pr">/run</span>           <span class="cm">Execute a spec with task agent</span>
+<span class="pr">/memory</span>        <span class="cm">Memory Palace commands</span>
+<span class="pr">/audit</span>         <span class="cm">Scan skills for Unicode threats</span>
+<span class="pr">/agents</span>        <span class="cm">Show running subagents</span>
+<span class="pr">/skill-create</span>  <span class="cm">Create a new skill</span>
+<span class="pr">/restart</span>       <span class="cm">Restart pi-go</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="section" id="architecture" style="background: var(--bg-alt); padding: 5rem 2rem;">
+    <div style="max-width: 1060px; margin: 0 auto;">
+      <div class="section-header reveal">
+        <h2>Clean architecture</h2>
+        <p>Modular Go packages with clear separation of concerns</p>
+      </div>
+
+      <div class="arch-block reveal">
+<pre>User input  &rarr;  CLI  &rarr;  Agent  &rarr;  LLM provider  &rarr;  Tool calls  &rarr;  Response  &rarr;  TUI
+                         &darr;          &darr;                 &darr;
+                  Session store    Palace            LSP servers
+                  (JSONL events)   (memory, KG,      (format, diagnostics)
+                                    search)</pre>
+      </div>
+
+      <div class="cards" style="margin-top: 2.5rem;">
+        <div class="card reveal">
+          <div class="card-icon" style="background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.2);">&#x2699;</div>
+          <h3>Agent &amp; CLI</h3>
+          <p>Cobra CLI, ADK runner, retry logic, output modes (interactive, print, JSON, RPC).</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: rgba(255, 0, 170, 0.1); border: 1px solid rgba(255, 0, 170, 0.2);">&#x1F6E1;</div>
+          <h3>Sandboxed Tools</h3>
+          <p>Read, write, edit, bash, grep, find, git, LSP — all scoped to project root.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.2);">&#x1F9E0;</div>
+          <h3>Memory Palace</h3>
+          <p>SQLite drawers, FTS5 search, semantic embeddings, temporal knowledge graph.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: rgba(179, 71, 255, 0.1); border: 1px solid rgba(179, 71, 255, 0.2);">&#x1F500;</div>
+          <h3>Session &amp; Branching</h3>
+          <p>JSONL event logs, session persistence, branching, compaction, and resume.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: rgba(255, 230, 0, 0.1); border: 1px solid rgba(255, 230, 0, 0.2);">&#x1F916;</div>
+          <h3>Subagents</h3>
+          <p>Process-based orchestration with concurrency pool and typed agents.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" style="background: rgba(255, 106, 0, 0.1); border: 1px solid rgba(255, 106, 0, 0.2);">&#x1F50C;</div>
+          <h3>Extensions</h3>
+          <p>Shell hooks, skill files, MCP servers, and security auditing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="star" style="top:15%;left:20%;animation-delay:0.5s"></div>
+    <div class="star" style="top:30%;left:70%;animation-delay:1.3s"></div>
+    <div class="star" style="top:50%;left:40%;animation-delay:0.9s"></div>
+
+    <div class="footer-content">
+      <h2>Ready to try pi-go?</h2>
+      <p class="sub">Open source, MIT licensed, built with Go.</p>
+      <div class="hero-actions" style="margin-bottom: 2.5rem;">
+        <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/dimetron/pi-go/releases" target="_blank" rel="noopener" class="btn btn-secondary">Releases</a>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">GitHub</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/feed.xml">RSS</a>
+        <a href="https://github.com/dimetron/pi-go/blob/main/ARCHITECTURE.md" target="_blank" rel="noopener">Architecture</a>
+        <a href="https://github.com/dimetron/pi-go/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+        <a href="https://github.com/dimetron/pi-go/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      </div>
+      <p class="footer-copy">&copy; 2026 pi-go &mdash; dimetron</p>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">Copied to clipboard!</div>
+
+  <script>
+    // Nav scroll effect
+    var nav = document.getElementById('nav');
+    window.addEventListener('scroll', function () {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Intersection Observer for reveal animations
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal, .pitch-item').forEach(function (el, i) {
+      el.style.transitionDelay = (i % 6) * 80 + 'ms';
+      observer.observe(el);
+    });
+
+    // Copy install command
+    function copyInstall(el) {
+      var cmd = 'curl -fsSL https://raw.githubusercontent.com/dimetron/pi-go/main/scripts/install.sh | bash';
+      navigator.clipboard.writeText(cmd).then(function () {
+        var toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(function () { toast.classList.remove('show'); }, 2000);
+      });
+    }
+
+    // Provider chip animation trigger
+    var chipObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.querySelectorAll('.chip').forEach(function (chip) {
+            chip.style.opacity = '1';
+          });
+        }
+      });
+    }, { threshold: 0.3 });
+
+    var providersEl = document.querySelector('.providers');
+    if (providersEl) chipObserver.observe(providersEl);
+  </script>
+</body>
+</html>
