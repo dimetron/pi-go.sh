@@ -1,11 +1,17 @@
-# Running Mistral in a multi-provider CLI: prefix routing, prompt caching, and finish reasons
++++
+title = 'Running Mistral in a multi-provider CLI'
+date = 2026-08-29T00:00:00+02:00
+category = 'Deep dive'
+description = 'Adding the Mistral provider to pi-go was a series of small, sharp lessons — each one a bug that only shows up against the live API.'
+lede = 'Adding a new LLM provider sounds mechanical. The Mistral integration turned out to be a series of small, sharp lessons.'
++++
 
 Adding a new LLM provider to a tool that already speaks to Claude, OpenAI, Gemini,
 and Grok sounds mechanical: implement the request, map the response, ship it. The
 Mistral integration in pi-go turned out to be a series of small, sharp lessons —
 each one a bug that only shows up against the *live* API, never in a unit test.
 
-![The Mistral provider test suite passing](media/mistral-thinking.gif)
+![The Mistral provider test suite passing](/blog/media/mistral-thinking.gif)
 
 ## Lesson 1: `prompt_mode` is not `reasoning_effort`
 

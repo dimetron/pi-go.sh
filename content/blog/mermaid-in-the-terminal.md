@@ -1,4 +1,10 @@
-# Your coding agent should draw diagrams — so I wrote a Mermaid renderer for the terminal
++++
+title = 'Your coding agent should draw diagrams'
+date = 2026-08-29T00:00:00+02:00
+category = 'Feature'
+description = 'I taught pi-go to draw Mermaid diagrams in the terminal. The interesting part turned out to be everything that isnt the diagram.'
+lede = 'Coding agents talk in text. That is fine for a diff, but it is a terrible medium for architecture.'
++++
 
 Coding agents talk in text. That's fine for a diff, but it's a terrible medium for
 architecture. When I ask an agent "how does auth flow through this service?", the
@@ -8,7 +14,7 @@ A wall of prose is the wrong shape for that.
 So I taught pi-go to draw Mermaid diagrams *in the terminal*, and the interesting
 part turned out to be everything that isn't the diagram.
 
-![A Mermaid flowchart rendered as terminal art](media/mermaid-diagram.gif)
+![A Mermaid flowchart rendered as terminal art](/blog/media/mermaid-diagram.gif)
 
 ## Why not just render to an image?
 

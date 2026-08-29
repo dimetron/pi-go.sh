@@ -1,4 +1,10 @@
-# Five coding agents, one protocol: wiring Google Antigravity into ACP
++++
+title = 'Five coding agents, one protocol'
+date = 2026-08-29T00:00:00+02:00
+category = 'Deep dive'
+description = 'Wiring Google Antigravity into the Agent Client Protocol sounded like a one-afternoon job. It wasnt — and the reason is what supports ACP actually means.'
+lede = 'pi-go runs other coding agents as subagents. Adding a fifth, Google Antigravity, sounded like a one-afternoon job. It wasnt.'
++++
 
 pi-go runs other coding agents as subagents. It already spoke to Claude, Gemini,
 Cursor, and Copilot over the Agent Client Protocol (ACP) — a stdio protocol that
@@ -6,7 +12,7 @@ lets one agent drive another. Adding a fifth, Google Antigravity, sounded like a
 one-afternoon job. It wasn't, and the reason is a good lesson about what "supports
 ACP" actually means.
 
-![The bundled agy subagent definition](media/antigravity-subagent.gif)
+![The bundled agy subagent definition](/blog/media/antigravity-subagent.gif)
 
 ## The twist: the vendor CLI is not the ACP endpoint
 

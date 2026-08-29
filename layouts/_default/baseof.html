@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Running Mistral in a multi-provider CLI — pi-go blog</title>
-  <meta name="description" content="Adding the Mistral provider to pi-go was a series of small, sharp lessons.">
+  <title>{{ .Title }}{{ if eq .Kind "page" }} — pi-go blog{{ end }}</title>
+  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
   <link rel="alternate" type="application/rss+xml" title="pi-go blog RSS" href="/feed.xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -314,107 +314,7 @@
     </div>
   </nav>
 
-  <article>
-    <div class="post-meta">
-      <span class="dot"></span>
-      <time datetime="2026-08-29">Aug 29, 2026</time>
-      <span>·</span>
-      <span>Deep dive</span>
-    </div>
-
-    <h1>Running Mistral in a multi-provider CLI: prefix routing, prompt caching, and finish reasons</h1>
-
-    <p class="lede">
-      Adding a new LLM provider to a tool that already speaks to Claude, OpenAI, Gemini, and Grok sounds mechanical &mdash; implement the request, map the response, ship it. The Mistral integration in pi-go turned out to be a series of small, sharp lessons, each one a bug that only shows up against the live API, never in a unit test.
-    </p>
-
-    <p><img src="media/mistral-thinking.gif" alt="The Mistral provider test suite passing" style="width:100%;border-radius:8px;margin:1.5rem 0;"></p>
-
-    <h2>Lesson 1: <code>prompt_mode</code> is not <code>reasoning_effort</code></h2>
-
-    <p>
-      pi-go&rsquo;s default thinking level is &ldquo;high&rdquo;. When the Mistral provider was first written, it translated that into <code>prompt_mode: "reasoning"</code> on the wire for the <code>magistral</code> family &mdash; because the reference implementation the plan was drawn from uses Mistral&rsquo;s <em>conversations</em> API, which takes <code>prompt_mode</code>.
-    </p>
-
-    <p>
-      But chat completions is a different endpoint. It answers:
-    </p>
-
-    <pre><code>400 "Reasoning prompt mode is not enabled for this model" (code 3051)</code></pre>
-
-    <p>
-      on <strong>every</strong> magistral request. The field belongs to the conversations API, not this one. The fix was to delete the <code>prompt_mode</code> branch entirely &mdash; magistral takes <code>reasoning_effort</code> like everything else.
-    </p>
-
-    <p>
-      The lesson: when you copy a reference implementation, check <em>which API</em> it targets. The field names look similar, the docs are ambiguous, and the 400 only appears against the real endpoint.
-    </p>
-
-    <h2>Lesson 2: an allowlist is a trap in both directions</h2>
-
-    <p>
-      <code>reasoning_effort</code> isn&rsquo;t accepted by every Mistral model. The allowlist was short, and <code>mistral-medium-latest</code> &mdash; the alias most users actually type &mdash; wasn&rsquo;t on it. So <code>--think high</code> was silently dropped on the most popular model.
-    </p>
-
-    <p>
-      The tempting fix is prefix-matching: <code>strings.HasPrefix(name, "mistral-medium-")</code>. That&rsquo;s wrong, and the reason is subtle. <code>mistral-medium-2505</code> and <code>mistral-medium-2508</code> answer 400 for <code>reasoning_effort</code>. The two failure directions are <strong>not symmetric</strong>:
-    </p>
-
-    <ul>
-      <li>a <em>missing</em> entry costs you thinking control on that model (silent, annoying);</li>
-      <li>a <em>wrong</em> entry kills every request to that model (loud, catastrophic).</li>
-    </ul>
-
-    <p>
-      So the allowlist stays exact-match on purpose, and an id is listed only once it has been seen to work. The set was verified by probing every small/medium/magistral id in the embedded catalog against the live API &mdash; not by reading the docs, which name neither the rejecting tags nor magistral&rsquo;s actual field.
-    </p>
-
-    <h2>Lesson 3: finish reasons get swallowed, and the TUI lies to you</h2>
-
-    <p>
-      Mistral&rsquo;s <code>finish_reason</code> enum is <code>stop | length | model_length | error | tool_calls</code>. The shared mapper handled <code>length</code> and <code>content_filter</code> and defaulted everything else to <code>Stop</code>. So <code>model_length</code> and <code>error</code> were reported as clean completions.
-    </p>
-
-    <p>
-      That&rsquo;s user-visible, and it&rsquo;s worse than it sounds. The TUI warns about a truncated reply by watching for <code>FinishReasonMaxTokens</code>. So a Mistral turn cut off at the context limit was presented as a <em>finished</em> one &mdash; a turn that just looked short, with nothing said about why. And <code>finish_reason: "error"</code> means generation failed partway; reporting it as <code>Stop</code> claims a success the provider never gave.
-    </p>
-
-    <p>
-      The real bug was structural: a <code>mistralFinishReasonToGenai</code> wrapper existed and looked like it owned the mapping, but nothing on the request path called it. The runners called the shared mapper directly. Its test passed while the real path was wrong. The wrapper is gone, and the test now exercises the mapper that actually runs, across the full Mistral enum.
-    </p>
-
-    <h2>Lesson 4: thinking arrives in the content field, not <code>delta.reasoning</code></h2>
-
-    <p>
-      Mistral reasoning models don&rsquo;t use <code>delta.reasoning</code> the way OpenRouter does. Thinking arrives inside the <code>content</code> field, which switches from a string to a list of typed chunks for the duration of the thinking phase:
-    </p>
-
-    <pre><code>[{ "type": "thinking", "thinking": [{ "type": "text", "text": "..." }] }]</code></pre>
-
-    <p>
-      The provider has to reassemble those chunks, concatenate the thinking text, and extract it from both streaming deltas and non-streaming responses. And because the <code>openai-go</code> SDK has no fields for <code>prompt_cache_key</code> or <code>reasoning_effort</code>, both go on the wire as extra JSON fields &mdash; one call, not two.
-    </p>
-
-    <h2>What a unit test can&rsquo;t catch</h2>
-
-    <p>
-      The recurring theme is that none of these bugs are visible to a unit test. A unit test only sees the body pi-go <em>built</em> &mdash; never Mistral&rsquo;s verdict on it. The <code>prompt_mode</code> 400, the allowlist gaps, and the finish-reason swallowing all needed a live request to surface.
-    </p>
-
-    <p>
-      That&rsquo;s why the e2e test drives one model per class through a real request at the default thinking level. It fails against the previous code with the exact 400 above. If you&rsquo;re adding a provider, budget for a live-API test from day one &mdash; the docs will not save you, and neither will your mocks.
-    </p>
-
-    <div class="cta">
-      <h3>Try pi-go</h3>
-      <p>Open source, MIT licensed, one binary away.</p>
-
-      <div class="cta-buttons">
-        <a class="btn btn-primary" href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">View on GitHub</a>
-        <a class="btn btn-secondary" href="/#install">Quick Install</a>
-      </div>
-    </div>
-  </article>
+  {{ block "main" . }}{{ end }}
 
   <footer>
     <a href="/">Home</a>

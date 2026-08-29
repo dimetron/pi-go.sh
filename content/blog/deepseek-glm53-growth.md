@@ -1,4 +1,10 @@
-# The DeepSeek & GLM-5.3 Effect: How Two Model Switches Tripled My Agent Usage
++++
+title = 'The DeepSeek and GLM-5.3 effect'
+date = 2026-08-29T00:00:00+02:00
+category = 'Data'
+description = 'Switching pi-go default model to DeepSeek and adding GLM-5.3 tripled my agent usage. A data-driven look at the session history.'
+lede = 'Switching the default model to DeepSeek and adding GLM-5.3 produced the single biggest jump in usage I have ever recorded.'
++++
 
 *August 2026 — a data-driven look at my pi-go agent session history*
 
