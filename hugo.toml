@@ -41,6 +41,6 @@ description = "A terminal AI coding agent built on Google ADK Go."
     baseName = "feed"
 
 [outputs]
-  home = ["html", "rss"]
+  home = ["rss"]
   section = ["html", "rss"]
   page = ["html"]
