@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Blog — pi-go</title>
-  <meta name="description" content="Updates, ideas, and release notes from the pi-go team.">
+  <title>{{ .Title }}{{ if eq .Kind "page" }} — pi-go blog{{ end }}</title>
+  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
   <link rel="alternate" type="application/rss+xml" title="pi-go blog RSS" href="/feed.xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,6 @@
   <style>
     :root {
       --bg: #0a0a12;
-      --bg-alt: #0d0d1a;
       --surface: rgba(15, 15, 30, 0.7);
       --text: #e0e0f0;
       --text-secondary: #8888aa;
@@ -23,19 +22,18 @@
       --neon-yellow: #ffe600;
       --border: rgba(0, 240, 255, 0.12);
       --border-strong: rgba(0, 240, 255, 0.25);
+      --code-bg: rgba(10, 10, 20, 0.9);
       --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 60px rgba(0, 240, 255, 0.1);
-      --glow-magenta: 0 0 20px rgba(255, 0, 170, 0.3), 0 0 60px rgba(255, 0, 170, 0.1);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-padding-top: 5rem; scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; }
 
     body {
       font-family: 'Rajdhani', 'Segoe UI', sans-serif;
       color: var(--text);
       background: var(--bg);
-      line-height: 1.6;
-      min-height: 100vh;
+      line-height: 1.75;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
@@ -113,93 +111,97 @@
       padding: 0.55rem 1.1rem;
       border-radius: 6px;
       text-shadow: none !important;
-      box-shadow: var(--glow-magenta);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 20px rgba(255, 0, 170, 0.3);
     }
-    .nav-cta:hover { transform: translateY(-2px); }
 
+    article {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 7rem 1.5rem 3rem;
+    }
+
+    /* --- Blog index --- */
     main {
-      max-width: 880px;
+      max-width: 780px;
       margin: 0 auto;
       padding: 7rem 1.5rem 4rem;
     }
 
-    .blog-header {
-      text-align: center;
-      margin-bottom: 4rem;
-    }
-
-    .blog-header h1 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: clamp(2rem, 4vw, 3rem);
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      margin-bottom: 0.8rem;
-      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
+    .blog-header { margin-bottom: 3rem; }
     .blog-header p {
       color: var(--text-secondary);
       font-size: 1.1rem;
+      margin-bottom: 1.2rem;
     }
 
     .rss-link {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      margin-top: 1rem;
-      padding: 0.45rem 0.9rem;
-      border: 1px solid var(--border-strong);
-      border-radius: 6px;
-      color: var(--neon-yellow);
-      text-decoration: none;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
-      letter-spacing: 0.05em;
-      transition: box-shadow 0.2s, transform 0.2s;
+      color: var(--neon-green);
+      border-bottom: 1px dashed rgba(0, 255, 136, 0.4);
     }
-    .rss-link:hover {
-      box-shadow: 0 0 20px rgba(255, 230, 0, 0.25);
-      transform: translateY(-2px);
-    }
+    .rss-link:hover { text-shadow: 0 0 8px var(--neon-green); }
 
     .posts {
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
 
     .post-card {
       display: block;
-      padding: 1.75rem 1.9rem;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
+      padding: 1.6rem 1.8rem;
       text-decoration: none;
-      color: inherit;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
-    }
-    .post-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(0, 240, 255, 0.06), rgba(255, 0, 170, 0.04));
-      opacity: 0;
-      transition: opacity 0.25s;
+      border-bottom: 1px solid var(--border);
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     }
     .post-card:hover {
       border-color: var(--border-strong);
-      transform: translateY(-2px);
       box-shadow: var(--glow-cyan);
+      transform: translateY(-2px);
+      text-shadow: none;
     }
-    .post-card:hover::before { opacity: 1; }
 
-    .post-card > * { position: relative; }
+    .post-card .post-meta { margin-bottom: 0.6rem; }
+
+    .post-card h2 {
+      font-size: 1.4rem;
+      margin: 0 0 0.6rem;
+      padding-left: 0;
+      color: var(--text);
+    }
+    .post-card h2::before { content: none; }
+    .post-card:hover h2 { color: var(--neon-cyan); }
+
+    .post-card p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .read-more {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--neon-cyan);
+    }
+
+    .breadcrumb {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+    .breadcrumb a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+    }
+    .breadcrumb a:hover { text-shadow: 0 0 8px var(--neon-cyan); }
 
     .post-meta {
       display: flex;
@@ -207,8 +209,8 @@
       gap: 0.75rem;
       color: var(--text-secondary);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
     }
     .post-meta .dot {
       width: 6px; height: 6px;
@@ -217,28 +219,139 @@
       box-shadow: 0 0 8px var(--neon-green);
     }
 
-    .post-card h2 {
+    h1 {
       font-family: 'Orbitron', sans-serif;
-      font-size: 1.4rem;
+      font-size: clamp(2rem, 4.5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .lede {
+      font-size: 1.25rem;
+      color: var(--text);
+      margin-bottom: 2.5rem;
+      padding-left: 1rem;
+      border-left: 3px solid var(--neon-cyan);
+      box-shadow: -6px 0 20px -10px var(--neon-cyan);
+    }
+
+    h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.55rem;
       font-weight: 700;
-      margin-bottom: 0.6rem;
+      margin: 2.5rem 0 1rem;
+      color: var(--text);
+      position: relative;
+      padding-left: 1.1rem;
+    }
+    h2::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.4em;
+      bottom: 0.4em;
+      width: 3px;
+      background: linear-gradient(180deg, var(--neon-magenta), var(--neon-purple));
+      box-shadow: 0 0 10px var(--neon-magenta);
+    }
+
+    p {
+      margin-bottom: 1.2rem;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    ul {
+      margin: 0 0 1.5rem 1.5rem;
       color: var(--text);
     }
+    ul li { margin-bottom: 0.5rem; }
+    ul li::marker { color: var(--neon-cyan); }
 
-    .post-card p {
-      color: var(--text-secondary);
-      font-size: 1rem;
+    strong { color: var(--neon-cyan); font-weight: 600; }
+    a { color: var(--neon-cyan); text-decoration: none; border-bottom: 1px dashed rgba(0, 240, 255, 0.4); }
+    a:hover { text-shadow: 0 0 8px var(--neon-cyan); }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92em;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 0.12em 0.45em;
+      border-radius: 4px;
+      color: var(--neon-green);
     }
 
-    .post-card .read-more {
-      display: inline-block;
-      margin-top: 0.8rem;
-      color: var(--neon-cyan);
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      margin: 1.2rem 0 1.8rem;
+      box-shadow: var(--glow-cyan);
+    }
+    pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: #cdd6f4;
+    }
+    pre .prompt { color: var(--neon-cyan); user-select: none; }
+    pre .comment { color: #555577; }
+
+    .cta {
+      margin: 3rem 0 1rem;
+      padding: 1.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: var(--glow-cyan);
+    }
+    .cta h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      margin-bottom: 0.6rem;
+    }
+    .cta-buttons {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.1rem;
+      border-radius: 6px;
       font-weight: 600;
-      font-size: 0.9rem;
-      letter-spacing: 0.05em;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
+      text-decoration: none;
+      border: 0;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      color: #0a0a12;
+      box-shadow: var(--glow-cyan);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--neon-cyan);
+      border: 1px solid var(--border-strong);
+    }
+    .btn:hover { transform: translateY(-2px); }
 
     footer {
       text-align: center;
@@ -250,13 +363,16 @@
     footer a {
       color: var(--neon-cyan);
       text-decoration: none;
+      border-bottom: 0;
       margin: 0 0.5rem;
     }
 
     @media (max-width: 640px) {
       nav { padding: 0.8rem 1.2rem; }
       .nav-links a:not(.nav-cta) { display: none; }
+      article { padding: 6rem 1.2rem 3rem; }
       main { padding: 6rem 1.2rem 3rem; }
+      .post-card { padding: 1.3rem 1.2rem; }
     }
   </style>
 </head>
@@ -266,55 +382,18 @@
     <div class="nav-links">
       <a href="/#features">Features</a>
       <a href="/#install">Install</a>
-      <a href="/blog.html" class="active">Blog</a>
+      <a href="/blog/" class="active">Blog</a>
       <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener" class="nav-cta">GitHub</a>
     </div>
   </nav>
 
-  <main>
-    <div class="blog-header">
-      <h1>Blog</h1>
-      <p>Updates, ideas, and release notes from the pi-go project.</p>
-      <a class="rss-link" href="/feed.xml">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M6.18 15.64a2.18 2.18 0 1 1 0 4.36 2.18 2.18 0 0 1 0-4.36ZM4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44Zm0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"/>
-        </svg>
-        Subscribe via RSS
-      </a>
-    </div>
-
-    <div class="posts">
-      <a class="post-card" href="/blog/openrouter-provider.html">
-        <div class="post-meta">
-          <span class="dot"></span>
-          <time datetime="2026-08-24">Aug 24, 2026</time>
-          <span>·</span>
-          <span>Release update</span>
-        </div>
-        <h2>OpenRouter arrives in Pi-Go</h2>
-        <p>Use OpenRouter models with first-class routing, tool calling, context-window discovery, and streamed reasoning tokens.</p>
-        <span class="read-more">Read post &rarr;</span>
-      </a>
-
-      <a class="post-card" href="/blog/introducing-pi-go.html">
-        <div class="post-meta">
-          <span class="dot"></span>
-          <time datetime="2026-04-18">Apr 18, 2026</time>
-          <span>·</span>
-          <span>Announcement</span>
-        </div>
-        <h2>Introducing Pi-Go</h2>
-        <p>A terminal-based AI coding agent built on Google ADK Go — with multi-provider LLM support, sandboxed tools, and a persistent Memory Palace.</p>
-        <span class="read-more">Read post &rarr;</span>
-      </a>
-    </div>
-  </main>
+  {{ block "main" . }}{{ end }}
 
   <footer>
     <a href="/">Home</a>
+    <a href="/blog/">Blog</a>
     <a href="/feed.xml">RSS</a>
     <a href="https://github.com/dimetron/pi-go" target="_blank" rel="noopener">GitHub</a>
     <div style="margin-top: 0.8rem;">&copy; 2026 pi-go &mdash; dimetron</div>
   </footer>
 </body>
-</html>

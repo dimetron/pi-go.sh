@@ -1,0 +1,24 @@
+{{ define "main" }}
+  <article>
+    <div class="breadcrumb">
+      <a href="/blog/">&larr; All posts</a>
+    </div>
+
+    <div class="post-meta">
+      <span class="dot"></span>
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "Jan 02, 2006" }}</time>
+      <span>·</span>
+      <span>{{ .Params.category | default "Post" }}</span>
+    </div>
+
+    <h1>{{ .Title }}</h1>
+
+    {{ with .Params.lede }}
+    <p class="lede">{{ . | safeHTML }}</p>
+    {{ end }}
+
+    {{ .Content }}
+
+    {{ partial "cta.html" . }}
+  </article>
+{{ end }}

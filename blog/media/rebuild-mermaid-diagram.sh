@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+cd "$ROOT"
+mkdir -p "$ROOT/tmp"
+
+OUT=blog/media/mermaid-diagram.gif DIR="$ROOT" TMPDIR="$ROOT/tmp" \
+  INPUT='draw a Mermaid mindmap of pi-go with branches for TUI, providers, tools, and subagents' \
+  READY_RE='tkn:' WAIT_RE='took [0-9]+[.][0-9]+s' WAIT_TIMEOUT=300s \
+  WIDTH=1449 HEIGHT=900 FONT_SIZE=14 FRAMERATE=24 PLAYBACK_SPEED=1 \
+  SHRINK=0 KEEP_TAPE=1 \
+  MARGIN=20 MARGIN_FILL='#674EFF' BORDER_RADIUS=10 WINDOW_BAR=Colorful \
+  .pi-go/skills/vhs-e2e-gif/scripts/record-gif.sh \
+  "pi --model mistral/zai-glm-5-2"
